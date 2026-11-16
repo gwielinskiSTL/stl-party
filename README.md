@@ -28,8 +28,11 @@ Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est abs
 3. **Déplacements** : lancer des dés, le pion avance, la case s'applique. En passant sur le Billet d'or (20 kWh) ou
    au Dépanneur, une fenêtre propose l'achat (le dépanneur s'ouvre en plein écran, objets illustrés et expliqués).
    Une case Événement s'annonce en plein écran ; on appuie sur « Continuer » pour poursuivre.
-4. Après 6 tours : **étoiles bonus** (Grand voyageur, Pleine charge, Pas de chance), **classement final** (Billets,
-   puis kWh), puis **choix des positions** à tour de rôle et **liste imprimable** avec les objets à utiliser.
+4. Après 6 tours : **étoiles bonus** (Grand voyageur, Pleine charge, Pas de chance) dévoilées une à une par une
+   roulette, **classement final** révélé de la dernière place vers la première, puis **grande finale** en duel pour
+   les deux premières places (départage aux kWh en cas d'égalité, fanfare et confettis). Ensuite, **choix des
+   positions** à tour de rôle et **liste imprimable** avec les objets à utiliser.
+   Les sons sont synthétisés par le navigateur ; le bouton **Son** de l'en-tête les coupe.
 
 Toutes les règles et valeurs sont dans [`STL_PARTY.toml`](STL_PARTY.toml) : nombre de tours, dés et kWh par rang,
 prix, plateau, mini-jeux, objets. Les règles détaillées pour la salle : bouton **Règles** (`app/static/aide.html`).
@@ -45,7 +48,7 @@ stl-party/
 │   ├── main.py          ← FastAPI : /api/..., enregistrement, annulation ; erreurs toujours en JSON
 │   ├── jeu.py           ← toutes les règles (état = dictionnaire JSON)
 │   ├── config.py        ← lecture et validation de STL_PARTY.toml
-│   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG),
+│   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG), sons.js,
 │                          style.css (charte), aide.html, images/ (images d'objets facultatives)
 ├── tests/               ← pytest : règles, 30 parties complètes au hasard, API
 ├── docs/                ← charte graphique, notes de mise à jour datées

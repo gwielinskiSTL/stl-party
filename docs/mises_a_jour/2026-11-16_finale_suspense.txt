@@ -1,0 +1,10 @@
+2026-11-16 — Fin de partie à suspense
+
+- Étoiles bonus révélées une à une en plein écran : les équipes défilent comme une roulette qui ralentit sur les
+  derniers crans, puis s'arrête sur la gagnante (Billet d'or qui apparaît, ou « Personne ! »).
+- Classement final caché (cases hachurées « ??? ») puis dévoilé de la dernière place vers la 3e : roulement de
+  tambour, la ligne tremble, se retourne et ses compteurs défilent.
+- Grande finale pour les deux premières places : les deux équipes côte à côte (ordre neutre), Billets d'or comptés
+  un à un de plus en plus lentement ; égalité → « Départage aux kWh… » avec compteurs ; le vainqueur s'illumine,
+  fanfare et confettis (or, rouge et vert en mode Noël).
+- Sons synthétisés par le navigateur (sons.js : tambour, tics, fanfare), coupables avec le bouton « Son ».

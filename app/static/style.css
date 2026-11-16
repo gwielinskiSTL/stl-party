@@ -369,8 +369,8 @@ body.noel .case .halo-case { stroke: var(--noel-or); }
 .bonus-carte .gagnants span { display: inline-flex; align-items: center; gap: 6px; }
 .podium { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .podium li { display: grid; grid-template-columns: 54px 34px 1fr auto auto; gap: 14px; align-items: center; padding: 12px 14px; background: var(--gris-pale); }
-.podium li:first-child { background: var(--marine); color: var(--blanc); }
-.podium li:first-child .score span { color: var(--blanc); opacity: .75; }
+.podium li:first-child:not(.cachee) { background: var(--marine); color: var(--blanc); }
+.podium li:first-child:not(.cachee) .score span { color: var(--blanc); opacity: .75; }
 .podium .rang { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
 .podium .nom { font-size: 22px; font-weight: 700; }
 
@@ -473,13 +473,102 @@ body.noel .carte-ev { border-top-color: var(--noel-rouge); }
 body.noel .carte-ev.bon { border-top-color: var(--noel-sapin); }
 body.noel .equipe.actif { border-color: var(--noel-sapin); }
 body.noel .badge-des { background: var(--noel-or-pale); }
-body.noel .podium li:first-child { background: var(--noel-sapin); }
-body.noel .podium li:first-child .rang { color: var(--noel-or-pale); }
+body.noel .podium li:first-child:not(.cachee) { background: var(--noel-sapin); }
+body.noel .podium li:first-child:not(.cachee) .rang { color: var(--noel-or-pale); }
 body.noel .bonus-carte:not(.cache) { border-top: 6px solid var(--noel-or); }
 body.noel .bonus-carte.cache { background: repeating-linear-gradient(45deg, var(--noel-rouge) 0 10px, var(--blanc) 10px 20px); }
 body.noel .bonus-carte.cache h3 { background: var(--blanc); padding: 4px 14px; }
 body.noel .info { background: var(--noel-or-pale); border-left-color: var(--noel-or); }
 body.noel .dialogue { border-top-color: var(--noel-rouge); }
+
+/* ------------------------------------------------------------------ fin de partie : suspense */
+#btn-son[aria-pressed="true"] .piste { background: var(--vert); }
+.podium li.cachee {
+  background: repeating-linear-gradient(45deg, var(--gris-pale) 0 12px, var(--hachure) 12px 14px);
+  background-size: 200% 100%;
+}
+.podium li.cachee .nom { color: var(--gris); letter-spacing: .2em; }
+.pion-mystere { background: var(--blanc); color: var(--gris); border-style: dashed; }
+.podium li.suspense { animation: tremble .11s linear infinite, defile 0.6s linear infinite; }
+@keyframes tremble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@keyframes defile { to { background-position: -40px 0; } }
+.podium li.revelee { animation: retourne .65s cubic-bezier(.34, 1.56, .64, 1); transform-origin: center; }
+@keyframes retourne { from { transform: perspective(800px) rotateX(90deg); opacity: .2; } to { transform: none; opacity: 1; } }
+
+.revelation {
+  position: fixed; inset: 0; z-index: 45; color: var(--blanc); overflow-y: auto;
+  background: radial-gradient(circle at 50% 40%, var(--marine-survol), var(--marine) 65%);
+  display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 3vh; padding: 4vh 5vw;
+  border-top: 14px solid var(--cyan);
+}
+.revelation-int { width: 100%; max-width: 1500px; display: flex; flex-direction: column; align-items: center; gap: 2.4vh; text-align: center; }
+.revelation .surtitre { color: var(--cyan); font-size: clamp(16px, 1.5vw, 24px); }
+.revelation-titre { font-size: clamp(40px, min(6.5vw, 11vh), 116px); line-height: .95; letter-spacing: -0.03em; }
+.revelation-texte { font-size: clamp(18px, 2vw, 34px); }
+.note-claire { opacity: .7; font-weight: 400; }
+.revelation-resultat { min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.roulette { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+.roulette-case {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 12px;
+  background: rgba(255,255,255,.08); border: 3px solid transparent; font-weight: 700; font-size: clamp(16px, 1.5vw, 24px);
+  transition: transform .08s, background .08s;
+}
+.roulette-case.vise { background: var(--blanc); color: var(--marine); border-color: var(--cyan); transform: scale(1.08); }
+.roulette-case.gagnante {
+  background: var(--blanc); color: var(--marine); border-color: var(--blanc); transform: scale(1.12);
+  box-shadow: 0 0 0 6px var(--vert), 0 0 50px var(--cyan); animation: victoire .8s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes victoire { 0% { transform: scale(.8); } 60% { transform: scale(1.22); } 100% { transform: scale(1.12); } }
+.billet-gagne { width: clamp(120px, 12vw, 200px); animation: victoire .8s cubic-bezier(.34, 1.56, .64, 1); }
+.billet-gagne svg { width: 100%; height: auto; display: block; }
+.pion.pion-geant { width: clamp(52px, min(6vw, 9vh), 104px); height: clamp(52px, min(6vw, 9vh), 104px); font-size: clamp(24px, min(2.8vw, 4.2vh), 46px); border: 4px solid var(--blanc); }
+@media (max-height: 800px) {
+  .revelation { padding-top: 2vh; padding-bottom: 2vh; gap: 1.5vh; }
+  .revelation-int { gap: 1.4vh; }
+  .revelation .surtitre { font-size: 14px; }
+  .finaliste h3 { font-size: clamp(20px, 2.4vw, 36px); }
+  .finaliste-score b { font-size: clamp(52px, 12vh, 120px); }
+  .revelation-continuer { min-height: 56px; }
+}
+
+.duel { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 3vw; align-items: center; }
+.duel-vs { font-size: clamp(18px, 1.8vw, 28px); text-transform: uppercase; letter-spacing: .12em; color: var(--bordure); font-weight: 700; }
+.finaliste {
+  background: rgba(255,255,255,.08); padding: 2.6vh 2vw; display: flex; flex-direction: column; align-items: center; gap: 1.2vh;
+  transition: opacity .6s, transform .6s, background .6s, color .6s, box-shadow .6s; border: 3px solid transparent;
+}
+.finaliste h3 { font-size: clamp(24px, 2.8vw, 48px); }
+.finaliste-score { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.finaliste-score b { font-size: clamp(64px, min(9vw, 15vh), 160px); letter-spacing: -0.04em; display: inline-block; }
+.finaliste-score.petit b { font-size: clamp(30px, 3.4vw, 58px); }
+.finaliste-score span { font-size: 14px; opacity: .75; margin-top: 6px; }
+.finaliste-rang { font-size: clamp(32px, min(4vw, 7vh), 64px); font-weight: 700; min-height: 1.1em; letter-spacing: -0.02em; line-height: 1; }
+.finaliste.arretee { opacity: .4; transform: scale(.94); }
+.finaliste.vainqueur {
+  background: var(--blanc); color: var(--marine); transform: scale(1.03); border-color: var(--blanc);
+  box-shadow: 0 0 0 8px var(--vert), 0 0 70px var(--cyan); animation: victoire-finale .9s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes victoire-finale { 0% { transform: scale(.9); } 60% { transform: scale(1.08); } 100% { transform: scale(1.03); } }
+.finaliste.vainqueur .pion-geant { border-color: var(--marine); }
+.pulse-chiffre { animation: chiffre .45s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes chiffre { from { transform: scale(1.45); } to { transform: none; } }
+.alerte-jeu { background: var(--blanc); color: var(--marine); padding: 8px 18px; font-weight: 700; animation: clignote .5s steps(2) 4; }
+@keyframes clignote { 50% { background: var(--cyan); } }
+.revelation-continuer { margin-top: 1vh; }
+
+.confettis { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 60; }
+.confettis i { position: absolute; top: -24px; height: 14px; animation: chute linear forwards; }
+@keyframes chute { to { transform: translate(var(--derive, 0), 112vh) rotate(var(--tour, 720deg)); } }
+.cf-0 { background: var(--vert); } .cf-1 { background: var(--cyan); } .cf-2 { background: var(--blanc); } .cf-3 { background: var(--cyan-doux); }
+body.noel .cf-0 { background: var(--noel-rouge); } body.noel .cf-1 { background: var(--noel-or); }
+body.noel .cf-3 { background: var(--noel-sapin); }
+body.noel .revelation { border-top-color: var(--noel-rouge); }
+body.noel .roulette-case.gagnante, body.noel .finaliste.vainqueur { box-shadow: 0 0 0 8px var(--noel-or), 0 0 90px var(--noel-or); }
+
+@media (max-width: 900px) {
+  .duel { grid-template-columns: 1fr; }
+  .roulette { grid-template-columns: 1fr 1fr; }
+}
 
 /* ------------------------------------------------------------------ petits écrans, impression, mouvement */
 @media (max-width: 1200px) {
@@ -515,4 +604,5 @@ body.mouvement-reduit .pions-svg > g, body.mouvement-reduit .case-corps, body.mo
 body.mouvement-reduit .ecran-geant.entree::before, body.mouvement-reduit .ecran-geant.entree::after, body.mouvement-reduit .ecran-geant.entree .geant-illustration, body.mouvement-reduit .ecran-geant.entree .geant-texte > *, body.mouvement-reduit .case.illuminee .halo-case, body.mouvement-reduit .case.passage .case-corps, body.mouvement-reduit .pions-svg .saut.bondit {animation: none; }
 body.mouvement-reduit .guirlande {animation: none; }
 body.mouvement-reduit .neige {display: none !important; }
+body.mouvement-reduit .podium li.suspense, body.mouvement-reduit .podium li.revelee, body.mouvement-reduit .roulette-case.gagnante, body.mouvement-reduit .finaliste.vainqueur, body.mouvement-reduit .pulse-chiffre, body.mouvement-reduit .billet-gagne {animation: none; }
 @media print { .guirlande, .neige { display: none !important; } }

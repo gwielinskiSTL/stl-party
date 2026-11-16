@@ -31,6 +31,7 @@ let positions = {};        // positions affichées des pions (diffèrent de l'é
 let occupe = false;        // une animation ou une requête est en cours
 let ordreMiniJeu = [];     // classement du mini-jeu en cours de saisie
 let bonusReveles = 0;
+let placesRevelees = 0;    // places du classement final déjà dévoilées, en partant de la dernière
 let derniereScene = null;  // ce que la scène affiche après une animation (dernière carte d'événement)
 
 const attendre = (ms) => new Promise((r) => setTimeout(r, MOUVEMENT_REDUIT ? Math.min(ms, 60) : ms));
@@ -107,6 +108,8 @@ function creerNeige() {
   }).join("");
 }
 
+$("#btn-son").setAttribute("aria-pressed", String(SONS.actif));
+$("#btn-son").addEventListener("click", () => $("#btn-son").setAttribute("aria-pressed", String(SONS.basculer())));
 $("#btn-noel").addEventListener("click", () => appliquerNoel(!document.body.classList.contains("noel"), true));
 appliquerNoel(noelMemorise() ?? false, false);   // tout de suite, pour éviter un éclair aux couleurs normales
 
@@ -206,6 +209,7 @@ $("#btn-commencer").addEventListener("click", async () => {
   const equipes = equipesConfig.map((e) => ({ nom: e.nom, joueurs: e.joueurs.split("\n") }));
   ordreMiniJeu = [];
   bonusReveles = 0;
+  placesRevelees = 0;
   derniereScene = null;
   await agir("POST", "/api/partie", { equipes });
   synchroniserPositions();
@@ -721,31 +725,248 @@ $("#btn-nouvelle").addEventListener("click", async () => {
   } catch (e) { alerte(e.message); }
 });
 
+// ------------------------------------------------------------------------------ fin de partie : suspense
+// Étoiles bonus une à une (roulette qui ralentit), puis classement de la dernière place vers la première,
+// et grande finale en duel pour les deux premières places. Tout est rejoué côté navigateur : le serveur a déjà
+// calculé bonus et classement.
+
+const confettis = () => {
+  const zone = $("#confettis");
+  if (MOUVEMENT_REDUIT || !zone) return;
+  zone.innerHTML = Array.from({ length: 160 }, (_, k) => {
+    const d = (2.6 + Math.random() * 2.4).toFixed(2);
+    return `<i class="cf-${k % 4}" style="left:${(Math.random() * 100).toFixed(1)}%;animation-duration:${d}s;` +
+      `animation-delay:${(Math.random() * 0.8).toFixed(2)}s;--tour:${Math.round(360 + Math.random() * 720)}deg;` +
+      `--derive:${Math.round(Math.random() * 160 - 80)}px;width:${6 + Math.round(Math.random() * 6)}px"></i>`;
+  }).join("");
+  setTimeout(() => { zone.innerHTML = ""; }, 6500);
+};
+
+/** Ouvre le rideau plein écran, attend « Continuer », le referme. */
+async function rideau(contenu, deroulement) {
+  const r = $("#revelation");
+  r.innerHTML = `<div class="revelation-int">${contenu}</div>
+    <button class="btn geant-continuer revelation-continuer" id="revelation-continuer" hidden>Continuer</button>`;
+  r.hidden = false;
+  if (!MOUVEMENT_REDUIT && r.animate) {
+    await r.animate([{ clipPath: "circle(0% at 50% 50%)" }, { clipPath: "circle(75% at 50% 50%)" }],
+      { duration: 700, easing: "cubic-bezier(.65,0,.35,1)" }).finished;
+  }
+  await deroulement(r);
+  const bouton = $("#revelation-continuer");
+  bouton.hidden = false;
+  bouton.focus();
+  await new Promise((ok) => bouton.addEventListener("click", ok, { once: true }));
+  if (!MOUVEMENT_REDUIT && r.animate) {
+    await r.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(1.04)" }], { duration: 350 }).finished;
+  }
+  r.hidden = true;
+  r.innerHTML = "";
+}
+
+/** Étoile bonus : les équipes défilent de plus en plus lentement, puis s'arrêtent sur la gagnante. */
+async function revelerBonus(b, rang, total) {
+  const equipes = etat().equipes;
+  await rideau(`
+    <p class="surtitre">Étoile bonus ${rang} sur ${total}</p>
+    <h2 class="revelation-titre">${echapper(b.titre)}</h2>
+    <p class="revelation-texte">Pour l'équipe avec ${echapper(b.critere)}</p>
+    <div class="roulette">${equipes.map((q) =>
+      `<div class="roulette-case" data-id="${q.id}">${pion(q.id, "pion pion-grand")}<span>${echapper(q.nom)}</span></div>`).join("")}</div>
+    <div class="revelation-resultat" id="bonus-resultat"></div>`, async () => {
+    const cases = [...document.querySelectorAll(".roulette-case")];
+    const gagnants = b.equipes;
+    // trajet : ~3 tours complets, puis arrêt sur le premier gagnant (ou nulle part s'il n'y en a pas)
+    const cible = gagnants.length ? equipes.findIndex((q) => q.id === gagnants[0]) : -1;
+    const pas = 3 * cases.length + (cible >= 0 ? cible : Math.floor(Math.random() * cases.length));
+    let delai = 55;
+    for (let k = 0; k <= pas; k++) {
+      cases.forEach((c, i) => c.classList.toggle("vise", i === k % cases.length));
+      SONS.tic(1 + (k % 2) * 0.12);
+      await attendre(delai);
+      if (k > pas - 9) delai *= 1.32;      // les derniers crans ralentissent : suspense
+      else delai = Math.min(delai * 1.03, 120);
+    }
+    await attendre(450);
+    cases.forEach((c) => c.classList.remove("vise"));
+    const res = $("#bonus-resultat");
+    if (!gagnants.length) {
+      SONS.egalite();
+      res.innerHTML = `<p class="revelation-texte">Personne ! Aucune équipe ne remporte cette étoile.</p>`;
+      return;
+    }
+    gagnants.forEach((id) => document.querySelector(`.roulette-case[data-id="${id}"]`).classList.add("gagnante"));
+    SONS.ding();
+    res.innerHTML = `<div class="billet-gagne">${ILLUSTRATIONS.billet()}</div>
+      <p class="revelation-texte"><strong>${gagnants.map((id) => echapper(equipe(id).nom)).join(" et ")}</strong>
+      ${gagnants.length > 1 ? "remportent" : "remporte"} +1 Billet d'or <span class="note-claire">(${fr(b.valeur)})</span></p>`;
+  });
+}
+
+const attendreCompteur = async (el, cible, duree) => {
+  const debut = performance.now();
+  return new Promise((ok) => {
+    const pas = (t) => {
+      const p = Math.min(1, (t - debut) / Math.max(1, duree));
+      el.textContent = fr(Math.round(cible * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(pas); else ok();
+    };
+    if (MOUVEMENT_REDUIT) { el.textContent = fr(cible); ok(); } else requestAnimationFrame(pas);
+  });
+};
+
+/** Une place du classement (de la dernière à la 3e) : roulement de tambour, puis la carte se retourne. */
+async function revelerPlace(rang) {
+  const li = document.querySelector(`.podium li[data-rang="${rang}"]`);
+  if (!li) return;
+  li.scrollIntoView({ block: "center", behavior: MOUVEMENT_REDUIT ? "auto" : "smooth" });
+  li.classList.add("suspense");
+  SONS.tambour(1.8);
+  await attendre(1900);
+  li.classList.remove("suspense");
+  li.classList.add("revelee");
+  SONS.coup();
+  const q = equipe(partie.classement[rang - 1]);
+  li.innerHTML = htmlPlace(rang, q);
+  await Promise.all([
+    attendreCompteur(li.querySelector("[data-compteur=billets]"), q.billets, 700),
+    attendreCompteur(li.querySelector("[data-compteur=kwh]"), q.kwh, 900),
+  ]);
+}
+
+const htmlPlace = (rang, q) => `<span class="rang">${rang}<sup>${rang > 1 ? "e" : "er"}</sup></span>${pion(q.id)}
+  <span class="nom">${echapper(q.nom)}</span>
+  <span class="score"><b data-compteur="billets">${fr(q.billets)}</b><span>Billets</span></span>
+  <span class="score"><b data-compteur="kwh">${fr(q.kwh)}</b><span>kWh</span></span>`;
+
+/** Grande finale : les deux premières équipes, compteurs côte à côte, départage s'il le faut. */
+async function grandeFinale() {
+  const [id1, id2] = partie.classement;
+  const a = equipe(id1), b = equipe(id2);
+  // affichées dans un ordre neutre (par numéro d'équipe) pour ne rien trahir
+  const [g, d] = a.id < b.id ? [a, b] : [b, a];
+  const colonne = (q) => `<div class="finaliste" data-id="${q.id}">
+      ${pion(q.id, "pion pion-geant")}<h3>${echapper(q.nom)}</h3>
+      <div class="finaliste-score"><b data-billets>0</b><span>Billets d'or</span></div>
+      <div class="finaliste-score petit"><b data-kwh>?</b><span>kWh</span></div>
+      <div class="finaliste-rang" data-rang></div></div>`;
+  await rideau(`
+    <p class="surtitre">Pour la première place</p>
+    <h2 class="revelation-titre">Grande finale</h2>
+    <div class="duel">${colonne(g)}<div class="duel-vs">contre</div>${colonne(d)}</div>
+    <p class="revelation-texte" id="duel-message">Comptons les Billets d'or…</p>`, async () => {
+    const el = (q, sel) => document.querySelector(`.finaliste[data-id="${q.id}"] ${sel}`);
+    await attendre(1200);
+    // billets : un à la fois, de plus en plus lentement ; une équipe qui s'arrête s'éteint
+    const max = Math.max(g.billets, d.billets);
+    let delai = 700;
+    for (let n = 1; n <= max; n++) {
+      SONS.tambour(delai / 1000 * 0.8);
+      await attendre(delai);
+      for (const q of [g, d]) {
+        if (q.billets >= n) { el(q, "[data-billets]").textContent = fr(n); el(q, "[data-billets]").classList.remove("pulse-chiffre"); void el(q, "[data-billets]").offsetWidth; el(q, "[data-billets]").classList.add("pulse-chiffre"); SONS.tic(1.3); }
+        else document.querySelector(`.finaliste[data-id="${q.id}"]`).classList.add("arretee");
+      }
+      delai = Math.min(1400, delai * 1.15);
+    }
+    await attendre(800);
+    const message = $("#duel-message");
+    if (a.billets === b.billets) {
+      document.querySelectorAll(".finaliste").forEach((f) => f.classList.remove("arretee"));
+      message.textContent = "Égalité de Billets d'or ! Départage aux kWh…";
+      message.classList.add("alerte-jeu");
+      SONS.egalite();
+      await attendre(1600);
+      SONS.tambour(2.6);
+      await Promise.all([
+        attendreCompteur(el(g, "[data-kwh]"), g.kwh, 2800),
+        attendreCompteur(el(d, "[data-kwh]"), d.kwh, 2800),
+      ]);
+      if (a.kwh === b.kwh) {
+        message.textContent = "Encore égalité ! Départage aux résultats des mini-jeux…";
+        SONS.egalite();
+        await attendre(2000);
+      }
+    } else {
+      el(g, "[data-kwh]").textContent = fr(g.kwh);
+      el(d, "[data-kwh]").textContent = fr(d.kwh);
+    }
+    message.classList.remove("alerte-jeu");
+    SONS.tambour(1.6);
+    await attendre(1700);
+    const vainqueur = document.querySelector(`.finaliste[data-id="${a.id}"]`);
+    const second = document.querySelector(`.finaliste[data-id="${b.id}"]`);
+    vainqueur.classList.add("vainqueur");
+    second.classList.add("arretee");
+    vainqueur.querySelector("[data-rang]").innerHTML = "1<sup>er</sup>";
+    second.querySelector("[data-rang]").innerHTML = "2<sup>e</sup>";
+    message.innerHTML = `<strong>${echapper(a.nom)}</strong> remporte STL Party et choisira en premier !`;
+    SONS.tada();
+    confettis();
+  });
+}
+
+function afficherBonusEtClassement(zone) {
+  const e = etat();
+  const n = partie.classement.length;
+  const bonusFinis = bonusReveles >= e.bonus.length;
+  const prochainBonus = e.bonus[bonusReveles];
+  const prochaineplace = n - placesRevelees;          // rang à dévoiler
+  const finale = prochaineplace <= 2;
+  const tout = placesRevelees >= n;
+  zone.innerHTML = `<div class="bloc">
+      <div class="bloc-tete"><h2>Étoiles bonus : +1 Billet d'or chacune</h2></div>
+      <div class="bonus-liste">${e.bonus.map((b, i) => i < bonusReveles
+        ? `<div class="bonus-carte"><h3>${echapper(b.titre)}</h3><p class="note">${echapper(b.critere)}</p>
+            <div class="gagnants">${b.equipes.length ? b.equipes.map((id) => `<span>${pion(id)}${echapper(equipe(id).nom)}</span>`).join("") : "Personne"}</div>
+            ${b.equipes.length ? `<p class="note">${fr(b.valeur)}</p>` : ""}</div>`
+        : `<div class="bonus-carte cache"><h3>?</h3></div>`).join("")}</div>
+      ${bonusFinis ? "" : `<div class="actions" style="margin-top:16px"><button class="btn btn-principal btn-geant" style="width:auto" id="btn-reveler">
+        Révéler l'étoile « ${echapper(prochainBonus.titre)} »</button></div>`}
+    </div>
+    ${bonusFinis ? `<div class="bloc">
+      <div class="bloc-tete"><h2>Classement final</h2><span class="note">Billets d'or, puis kWh</span></div>
+      <ol class="podium">${partie.classement.map((id, i) => {
+        const rang = i + 1;
+        return rang > n - placesRevelees
+          ? `<li class="revelee-fixe" data-rang="${rang}">${htmlPlace(rang, equipe(id))}</li>`
+          : `<li class="cachee" data-rang="${rang}"><span class="rang">${rang}<sup>${rang > 1 ? "e" : "er"}</sup></span>
+              <span class="pion pion-mystere" aria-hidden="true">?</span><span class="nom">???</span></li>`;
+      }).join("")}</ol>
+      <div class="actions" style="margin-top:16px">${tout
+        ? `<button class="btn btn-principal btn-geant" style="width:auto" data-action id="btn-repartition">Choisir les positions de l'échange</button>`
+        : `<button class="btn btn-principal btn-geant" style="width:auto" id="btn-place">${finale ? "Grande finale : 1re et 2e places" : `Révéler la ${prochaineplace}e place`}</button>`}</div>
+    </div>` : ""}`;
+  if (!bonusFinis) {
+    $("#btn-reveler").addEventListener("click", async (ev) => {
+      ev.currentTarget.disabled = true;
+      await revelerBonus(prochainBonus, bonusReveles + 1, e.bonus.length);
+      bonusReveles += 1;
+      afficherFin();
+    });
+  } else if (!tout) {
+    $("#btn-place").addEventListener("click", async (ev) => {
+      ev.currentTarget.disabled = true;
+      if (finale) {
+        await grandeFinale();
+        placesRevelees = n;
+      } else {
+        await revelerPlace(prochaineplace);
+        placesRevelees += 1;
+      }
+      afficherFin();
+    });
+  } else {
+    $("#btn-repartition").addEventListener("click", () => agir("POST", "/api/repartition/commencer"));
+  }
+}
+
 // ------------------------------------------------------------------------------ fin de partie
 function afficherFin() {
   const e = etat();
   const zone = $("#vue-fin");
   if (e.phase === "bonus") {
-    const tous = bonusReveles >= e.bonus.length;
-    zone.innerHTML = `<div class="bloc">
-        <div class="bloc-tete"><h2>Étoiles bonus : +1 Billet d'or chacune</h2></div>
-        <div class="bonus-liste">${e.bonus.map((b, i) => i < bonusReveles
-          ? `<div class="bonus-carte"><h3>${echapper(b.titre)}</h3><p class="note">${echapper(b.critere)}</p>
-              <div class="gagnants">${b.equipes.length ? b.equipes.map((id) => `<span>${pion(id)}${echapper(equipe(id).nom)}</span>`).join("") : "Personne"}</div>
-              ${b.equipes.length ? `<p class="note">${fr(b.valeur)}</p>` : ""}</div>`
-          : `<div class="bonus-carte cache"><h3>?</h3></div>`).join("")}</div>
-        <div class="actions" style="margin-top:16px">${tous ? "" : `<button class="btn btn-principal" id="btn-reveler">Révéler le bonus suivant</button>`}</div>
-      </div>
-      ${tous ? `<div class="bloc"><div class="bloc-tete"><h2>Classement final</h2><span class="note">Billets d'or, puis kWh</span></div>
-        <ol class="podium">${partie.classement.map((id, rang) => {
-          const q = equipe(id);
-          return `<li><span class="rang">${rang + 1}<sup>${rang ? "e" : "er"}</sup></span>${pion(id)}<span class="nom">${echapper(q.nom)}</span>
-            <span class="score"><b>${fr(q.billets)}</b><span>Billets</span></span><span class="score"><b>${fr(q.kwh)}</b><span>kWh</span></span></li>`;
-        }).join("")}</ol>
-        <div class="actions" style="margin-top:16px"><button class="btn btn-principal btn-geant" style="width:auto" data-action id="btn-repartition">Choisir les positions de l'échange</button></div>
-      </div>` : ""}`;
-    if (!tous) $("#btn-reveler").addEventListener("click", () => { bonusReveles += 1; afficherFin(); });
-    else $("#btn-repartition").addEventListener("click", () => agir("POST", "/api/repartition/commencer"));
+    afficherBonusEtClassement(zone);
   } else if (e.phase === "repartition") {
     const rep = e.repartition;
     const id = rep.tours[rep.indice];
