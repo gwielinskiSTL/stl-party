@@ -314,6 +314,7 @@ p { margin: 0; }
 .geant-texte h2 { font-size: clamp(44px, 7vw, 124px); line-height: .95; letter-spacing: -0.03em; }
 .geant-description { font-size: clamp(20px, 2.4vw, 40px); line-height: 1.25; max-width: 30ch; }
 .ecran-geant .pion { border-color: var(--blanc); }
+.ecran-geant.garde-depanneur h2 { text-transform: uppercase; letter-spacing: -0.01em; }
 .geant-equipe { display: flex; align-items: center; gap: 14px; font-size: clamp(15px, 1.4vw, 22px); opacity: .85; }
 .geant-continuer {
   background: var(--blanc); color: var(--marine); border: none; font-size: clamp(20px, 2vw, 30px); font-weight: 700;

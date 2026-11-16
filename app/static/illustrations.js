@@ -145,10 +145,27 @@ const ILLUSTRATIONS = (() => {
       ${flocon(152, 50, 22, "marine", 5)}`, "Joueur pris dans un glaçon"),
   };
 
+  // ------------------------------------------------------------------ page de garde du dépanneur
+  const depanneur = () => svg(`${fond("bleu-pale")}
+      <rect x="30" y="58" width="140" height="116" style="fill:var(--blanc);stroke:var(--marine);stroke-width:4"></rect>
+      <rect x="22" y="34" width="156" height="26" ${plein("marine")}></rect>
+      <text x="100" y="52" text-anchor="middle" style="fill:var(--blanc);font:700 15px Arial, sans-serif;letter-spacing:2px">DÉPANNEUR</text>
+      ${Array.from({ length: 7 }, (_, k) => `<path d="M${22 + k * 22.3} 60h22.3v10a11.15 11.15 0 0 1 -22.3 0z" style="fill:var(--${k % 2 ? "blanc" : "cyan"});stroke:var(--marine);stroke-width:2"></path>`).join("")}
+      <rect x="42" y="94" width="66" height="54" style="fill:var(--bleu-pale);stroke:var(--marine);stroke-width:3"></rect>
+      ${cadeau(60, 128, 26, "vert", "marine")}${cadeau(90, 130, 22, "cyan", "marine")}
+      <path d="M86 106l14-10M94 108l8-6" ${trait("blanc", 3)}></path>
+      <rect x="116" y="94" width="46" height="80" style="fill:var(--marine)"></rect>
+      <circle cx="154" cy="136" r="3" ${plein("blanc")}></circle>
+      <rect x="120" y="100" width="38" height="18" ${plein("vert")}></rect>
+      <text x="139" y="113" text-anchor="middle" style="fill:var(--marine);font:700 8.5px Arial, sans-serif">OUVERT</text>
+      <path d="M14 174h172" ${trait("marine", 4)}></path>
+      ${etincelles([[180, 96, 7], [16, 120, 6]])}`, "Devanture du dépanneur");
+
   const generique = (titre) => svg(`${fond("bleu-pale")}${cadeau(100, 112, 96)}`, titre);
 
   return {
     evenement: (code) => (EVENEMENTS[code] || (() => generique("Événement")))(),
     objet: (id) => (OBJETS[id] || (() => generique("Objet")))(),
+    depanneur,
   };
 })();

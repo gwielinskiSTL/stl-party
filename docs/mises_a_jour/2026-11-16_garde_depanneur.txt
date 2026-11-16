@@ -1,0 +1,5 @@
+2026-11-16 — Page de garde du dépanneur
+
+- En s'arrêtant au dépanneur, une page de garde plein écran « DÉPANNEUR » (devanture illustrée, kWh et objets de
+  l'équipe) s'affiche d'abord ; « Continuer » ouvre ensuite la boutique.
+- La page de garde n'est montrée qu'une fois par arrêt : rouvrir la boutique (Décision en attente…) y va directement.

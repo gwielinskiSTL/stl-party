@@ -325,12 +325,13 @@ function montrerCarte(ev) {
 function montrerGrandEcran(ev) {
   return new Promise((resoudre) => {
     const ecran = $("#ecran-geant");
-    ecran.className = `ecran-geant ${ev.ton || ""}`;
-    $("#geant-illustration").innerHTML = ILLUSTRATIONS.evenement(ev.code);
+    ecran.className = `ecran-geant ${ev.ton || ""}${ev.classe ? ` ${ev.classe}` : ""}`;
+    $("#geant-illustration").innerHTML = ev.illustration || ILLUSTRATIONS.evenement(ev.code);
+    $("#geant-surtitre").textContent = ev.surtitre || "Case Événement";
     $("#geant-titre").textContent = ev.titre;
     $("#geant-description").textContent = ev.texte;
     $("#geant-equipe").innerHTML = ev.equipe !== undefined
-      ? `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} tombe sur une case Événement</span>` : "";
+      ? `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} ${echapper(ev.phrase_equipe || "tombe sur une case Événement")}</span>` : "";
     if (ev.objet) {   // prime : on montre aussi l'objet gagné
       const o = etat().reglages.objets.find((x) => x.id === ev.objet);
       if (o) $("#geant-illustration").innerHTML = imageObjet(o);
@@ -471,6 +472,7 @@ function ouvrirDialogue(id) {
 }
 
 let decisionOuverte = false;
+let gardeDepanneur = null;   // arrêt au dépanneur dont la page de garde a déjà été montrée
 async function ouvrirDecision() {
   const att = etat() && etat().attente;
   if (!att || decisionOuverte || occupe) return;
@@ -485,6 +487,16 @@ async function ouvrirDecision() {
       if (choix) decision = { acheter: choix === "oui" };
     } else if (att.type === "boutique") {
       const max = etat().reglages.partie.max_objets;
+      // page de garde, une seule fois par arrêt (pas de nouveau si on rouvre la décision)
+      const cle = `${etat().tour}-${q.id}-${q.position}-${att.reste}`;
+      if (gardeDepanneur !== cle) {
+        gardeDepanneur = cle;
+        await montrerGrandEcran({
+          classe: "garde-depanneur", surtitre: `Arrêt ${q.position + 1}`, titre: "Dépanneur",
+          texte: `${fr(q.kwh)} kWh en poche, ${q.objets.length} objet${q.objets.length > 1 ? "s" : ""} sur ${max} dans le sac. On entre magasiner ?`,
+          equipe: q.id, phrase_equipe: "s'arrête au dépanneur", illustration: ILLUSTRATIONS.depanneur(),
+        });
+      }
       $("#boutique-titre").innerHTML = `${pion(q.id, "pion pion-grand")} ${echapper(q.nom)}`;
       $("#boutique-kwh").textContent = fr(q.kwh);
       $("#boutique-nb").textContent = `${q.objets.length} sur ${max}`;
