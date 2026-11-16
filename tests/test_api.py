@@ -16,6 +16,12 @@ def test_configuration():
     c = client.get("/api/configuration").json()
     assert c["plateau"][0] == "T" and len(c["mini_jeux"]) == 6 and c["objets"]
     assert c["mode_noel"] is False
+    assert c["animations"] == "toujours"
+
+
+def test_fichiers_statiques_revalides():
+    assert client.get("/static/app.js").headers["cache-control"] == "no-cache"
+    assert client.get("/api/sante").headers["cache-control"] == "no-store"
 
 
 def test_mode_noel_par_defaut(monkeypatch, tmp_path):

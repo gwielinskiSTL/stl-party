@@ -1,0 +1,8 @@
+2026-11-16 — Animations actives même si Windows demande de les réduire
+
+- Correctif : sur un poste où « Afficher les animations dans Windows » est désactivé (fréquent en entreprise ou en
+  bureau à distance), le navigateur signale « réduire les animations » et le jeu coupait toutes les transitions.
+  Les animations sont maintenant actives par défaut ; [application] animations = "systeme" rétablit l'ancien
+  comportement. La console du navigateur indique au démarrage si le poste demande de les réduire.
+- Les fichiers de l'interface sont toujours revalidés (Cache-Control: no-cache) et versionnés dans la page, pour
+  qu'une mise à jour soit vue sans vider le cache.

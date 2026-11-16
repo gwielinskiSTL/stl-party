@@ -508,12 +508,11 @@ body.noel .dialogue { border-top-color: var(--noel-rouge); }
   .entete-stl, .pas-imprimer { display: none !important; }
   body, .page { background: var(--blanc); padding: 0; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .billet .halo, .de.roule, .carte-ev, .ecran-geant, .geant-illustration svg { animation: none; }
-  .pions-svg > g, .case-corps, #plateau-svg .case { transition: none; }
-  .ecran-geant.entree::before, .ecran-geant.entree::after, .ecran-geant.entree .geant-illustration,
-  .ecran-geant.entree .geant-texte > *, .case.illuminee .halo-case, .case.passage .case-corps, .pions-svg .saut.bondit { animation: none; }
-  .guirlande { animation: none; }
-  .neige { display: none !important; }
-}
+/* Animations réduites : classe posée par app.js selon [application] animations de STL_PARTY.toml
+   (« toujours » par défaut ; « systeme » suit le réglage « réduire les animations » de Windows). */
+body.mouvement-reduit .billet .halo, body.mouvement-reduit .de.roule, body.mouvement-reduit .carte-ev, body.mouvement-reduit .ecran-geant, body.mouvement-reduit .geant-illustration svg {animation: none; }
+body.mouvement-reduit .pions-svg > g, body.mouvement-reduit .case-corps, body.mouvement-reduit #plateau-svg .case {transition: none; }
+body.mouvement-reduit .ecran-geant.entree::before, body.mouvement-reduit .ecran-geant.entree::after, body.mouvement-reduit .ecran-geant.entree .geant-illustration, body.mouvement-reduit .ecran-geant.entree .geant-texte > *, body.mouvement-reduit .case.illuminee .halo-case, body.mouvement-reduit .case.passage .case-corps, body.mouvement-reduit .pions-svg .saut.bondit {animation: none; }
+body.mouvement-reduit .guirlande {animation: none; }
+body.mouvement-reduit .neige {display: none !important; }
 @media print { .guirlande, .neige { display: none !important; } }

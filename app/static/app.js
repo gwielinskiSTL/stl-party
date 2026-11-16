@@ -14,7 +14,16 @@ const LIBELLES = { T: "Terminus", R: "Recharge", B: "Bouchon", E: "Événement",
 const FANTOME = `<path class="fantome" d="M-11 6v-12a11 11 0 0 1 22 0v12l-3.7-3.5-3.6 3.5-3.7-3.5-3.7 3.5-3.6-3.5z" transform="translate(0,-6)"></path>
   <circle class="oeil" cx="-4" cy="-10" r="2.2"></circle><circle class="oeil" cx="4" cy="-10" r="2.2"></circle>`;
 const DECALAGES = [[-16, -16], [16, -16], [-16, 16], [16, 16], [0, 0], [0, -26], [0, 26], [-26, 0]];
-const MOUVEMENT_REDUIT = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Animations : actives par défaut (c'est un jeu projeté). Avec [application] animations = "systeme",
+// on suit le réglage du poste (« Afficher les animations dans Windows » désactivé → animations réduites).
+const REDUIT_PAR_LE_SYSTEME = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let MOUVEMENT_REDUIT = false;
+function reglerAnimations(mode) {
+  MOUVEMENT_REDUIT = mode === "systeme" && REDUIT_PAR_LE_SYSTEME;
+  document.body.classList.toggle("mouvement-reduit", MOUVEMENT_REDUIT);
+  console.info(`STL Party — animations ${MOUVEMENT_REDUIT ? "réduites (réglage du poste)" : "actives"}` +
+    (REDUIT_PAR_LE_SYSTEME ? " · le poste demande de réduire les animations" : ""));
+}
 
 let cfg = null;            // configuration (pour l'écran de création)
 let partie = null;         // vue renvoyée par le serveur : {etat, classement, mini_jeu, ...}
@@ -109,6 +118,7 @@ async function demarrer() {
     alerte(e.message);
     return;
   }
+  reglerAnimations(cfg.animations);
   if (noelMemorise() === null) appliquerNoel(!!cfg.mode_noel, false);
   synchroniserPositions();
   afficher();

@@ -51,6 +51,8 @@ async def _sans_cache(request: Request, call_next):
     reponse = await call_next(request)
     if request.url.path.startswith("/api/"):
         reponse.headers["Cache-Control"] = "no-store"
+    else:   # page et fichiers statiques : toujours revalidés, pour qu'une mise à jour soit vue tout de suite
+        reponse.headers["Cache-Control"] = "no-cache"
     return reponse
 
 
@@ -115,6 +117,7 @@ def configuration():
     cfg = config.lire()
     return {"partie": cfg["partie"], "cases": cfg["cases"], "plateau": cfg["plateau"]["liste"],
             "mode_noel": bool(cfg["application"].get("mode_noel", False)),
+            "animations": str(cfg["application"].get("animations", "toujours")),
             "mini_jeux": cfg["mini_jeux"], "objets": cfg["objets"], "noms_cases": jeu.NOMS_CASES}
 
 
