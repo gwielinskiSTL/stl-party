@@ -1,0 +1,10 @@
+2026-11-16 — Première version de STL Party
+
+- Plateau en boucle de 32 arrêts (Terminus, Recharge, Bouchon, Événement, Inspecteur, Fantôme, Détour, Dépanneur)
+  et Billet d'or qui se déplace après chaque achat.
+- Équipes (5 × 5 par défaut), un mini-jeu par tour : le rang au mini-jeu donne l'ordre de jeu, le nombre de dés
+  (3 pour les deux premières, 2 ensuite) et des kWh.
+- Objets du dépanneur utilisables pendant l'échange ; étoiles bonus de fin ; choix des positions de l'échange à tour de
+  rôle selon le classement final ; liste imprimable.
+- Partie enregistrée après chaque action (PARTIES/partie.json), bouton Annuler (50 actions), corrections de
+  l'animateur et journal.

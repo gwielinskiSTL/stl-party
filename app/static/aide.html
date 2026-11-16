@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles — STL Party</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .aide { max-width: 980px; }
+    .aide h2 { font-size: 18px; margin-bottom: 10px; }
+    .aide p, .aide li { max-width: 80ch; }
+    .aide ul, .aide ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+    .cases { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; margin: 0; }
+    .cases dt { font-weight: 700; }
+    .cases dd { margin: 0; }
+  </style>
+</head>
+<body>
+  <header class="entete-stl">
+    <div class="entete-stl-int">
+      <div class="marque">
+        <span class="fleche" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div><div class="marque-nom">Règles</div><div class="marque-sous">STL Party · échange de cadeaux</div></div>
+      </div>
+      <img class="logo" src="/static/logo-stl.svg" alt="STL" height="40" onerror="this.remove()">
+    </div>
+  </header>
+  <div class="page aide">
+    <section class="bloc">
+      <h2>Le but</h2>
+      <p>Finir avec le plus de <strong>Billets d'or</strong> (puis de kWh, en cas d'égalité). Le classement final décide
+        quelle équipe choisit ses positions dans l'échange en premier. Les objets achetés pendant la partie servent ensuite
+        pendant l'échange de cadeaux.</p>
+    </section>
+    <section class="bloc">
+      <h2>Un tour</h2>
+      <ol>
+        <li><strong>Mini-jeu.</strong> Un joueur par équipe (chacun son tour) ; le dernier mini-jeu se joue en équipe complète.</li>
+        <li><strong>Récompenses.</strong> Les deux premières équipes lancent 3 dés, les autres 2. Le rang donne aussi des kWh
+          (10, 6, 4, 2, 0) et l'ordre de passage.</li>
+        <li><strong>Déplacements.</strong> Chaque équipe lance ses dés et avance sur le réseau. La case d'arrivée s'applique.</li>
+      </ol>
+    </section>
+    <section class="bloc">
+      <h2>Les cases</h2>
+      <dl class="cases">
+        <dt>Terminus</dt><dd>Chaque passage : +5 kWh (plein au garage).</dd>
+        <dt>Recharge</dt><dd>+3 kWh.</dd>
+        <dt>Bouchon</dt><dd>−3 kWh.</dd>
+        <dt>Événement</dt><dd>Une carte au hasard : voie réservée, borne en panne, service express, tempête de neige…</dd>
+        <dt>Inspecteur</dt><dd>Contravention : l'équipe perd la moitié de ses kWh.</dd>
+        <dt>Fantôme</dt><dd>Vole des kWh à l'équipe de votre choix, ou un Billet d'or contre 30 kWh.</dd>
+        <dt>Détour</dt><dd>Deux équipes au hasard échangent leurs kWh, leurs Billets ou leurs places.</dd>
+        <dt>Dépanneur</dt><dd>En passant, on peut acheter un objet (3 au maximum par équipe).</dd>
+        <dt>Billet d'or ★</dt><dd>En passant dessus, on peut l'acheter pour 20 kWh. Il change ensuite de place.</dd>
+      </dl>
+    </section>
+    <section class="bloc">
+      <h2>La fin</h2>
+      <ul>
+        <li>Au début du dernier tour, l'équipe dernière reçoit +10 kWh.</li>
+        <li>Trois étoiles bonus (+1 Billet d'or chacune) : <strong>Grand voyageur</strong> (le plus d'arrêts),
+          <strong>Pleine charge</strong> (le plus de kWh gagnés) et <strong>Pas de chance</strong> (le plus de malchances).</li>
+        <li>Les équipes choisissent ensuite leurs positions dans l'échange, une à la fois, dans l'ordre du classement.
+          Astuce : quand on peut voler, choisir <strong>en dernier</strong> est souvent un avantage.</li>
+      </ul>
+    </section>
+    <section class="bloc">
+      <h2>Pour l'animateur</h2>
+      <ul>
+        <li>Une erreur ? Le bouton <strong>Annuler</strong> revient en arrière d'une action.</li>
+        <li>Cliquer une équipe dans le classement permet de corriger ses kWh ou ses Billets.</li>
+        <li>Une fenêtre fermée par erreur (Échap) se rouvre avec <strong>Décision en attente…</strong>.</li>
+        <li>La partie est enregistrée à chaque action : on peut recharger la page sans rien perdre.</li>
+        <li>Mini-jeux, prix, nombre de dés et plateau se modifient dans <code>STL_PARTY.toml</code> (avant la partie).</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Environnement Conda de STL Party :
+#   conda env create -f environment.yml   puis   conda activate stl-party
+name: stl-party
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - fastapi
+  - uvicorn
+  # tests seulement
+  - pytest
+  - httpx

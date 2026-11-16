@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STL Party</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%23151f6d%27/%3E%3Ccircle cx=%278%27 cy=%278%27 r=%273.5%27 fill=%27%2300a9e0%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="entete-stl">
+    <div class="entete-stl-int">
+      <div class="marque">
+        <span class="fleche" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div>
+          <div class="marque-nom">STL Party</div>
+          <div class="marque-sous">Échange de cadeaux · le jeu qui décide de l'ordre</div>
+        </div>
+      </div>
+      <div class="entete-stl-droite">
+        <dl class="entete-stl-meta" id="meta" hidden>
+          <div><dt>Tour</dt><dd id="meta-tour">—</dd></div>
+          <div><dt>Étape</dt><dd id="meta-phase">—</dd></div>
+        </dl>
+        <div class="boutons-entete">
+          <button class="btn-entete" id="btn-annuler" title="Revenir à l'état d'avant la dernière action" hidden>
+            <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.5 3.5L2 6l2.5 2.5M2 6h6.5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Annuler
+          </button>
+          <button class="btn-entete" id="btn-journal" title="Tout ce qui s'est passé depuis le début" hidden>
+            <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 2.5h8M3 5.5h8M3 8.5h8M3 11.5h5"/></svg>
+            Journal
+          </button>
+          <a class="btn-entete" href="/static/aide.html" target="_blank" rel="noopener" title="Règles du jeu et guide de l'animateur (nouvel onglet)">
+            <svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M5.4 5.4a1.7 1.7 0 1 1 2.3 1.6c-.5.2-.7.6-.7 1.1M7 10.2v.1"/></svg>
+            Règles
+          </a>
+          <button class="btn-entete" id="btn-nouvelle" title="Abandonner la partie en cours et en créer une autre" hidden>
+            <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10"/></svg>
+            Nouvelle partie
+          </button>
+        </div>
+        <img class="logo" src="/static/logo-stl.svg" alt="STL" height="40" onerror="this.remove()">
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <div id="alerte" class="alerte" role="alert" hidden></div>
+
+    <!-- ============================================================ configuration -->
+    <section id="vue-config" hidden>
+      <div class="bloc">
+        <div class="bloc-tete">
+          <h2>Nouvelle partie : les équipes</h2>
+          <div class="actions">
+            <button class="btn btn-secondaire btn-petit" id="btn-moins-equipe">− Une équipe</button>
+            <button class="btn btn-secondaire btn-petit" id="btn-plus-equipe">+ Une équipe</button>
+          </div>
+        </div>
+        <p class="note" style="margin-bottom:14px">Un nom par équipe et un joueur par ligne. À chaque mini-jeu, le joueur suivant de chaque
+          équipe joue : avec 5 joueurs et 5 mini-jeux, tout le monde joue une fois.</p>
+        <div class="grille-equipes" id="config-equipes"></div>
+      </div>
+      <div class="deux-colonnes">
+        <div class="bloc">
+          <div class="bloc-tete"><h2>Mini-jeux, dans l'ordre</h2><span class="note">Modifiables dans STL_PARTY.toml</span></div>
+          <ol class="liste-simple" id="config-mini-jeux"></ol>
+        </div>
+        <div class="bloc">
+          <div class="bloc-tete"><h2>Objets du dépanneur</h2><span class="note">Utilisables pendant l'échange</span></div>
+          <ul class="liste-simple" id="config-objets"></ul>
+        </div>
+      </div>
+      <div class="bloc">
+        <div class="actions" style="justify-content:space-between;align-items:center">
+          <p class="note" id="config-resume"></p>
+          <button class="btn btn-principal btn-geant" style="width:auto" id="btn-commencer">Commencer la partie</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ partie -->
+    <section id="vue-jeu" class="jeu" hidden>
+      <div class="bloc plateau-bloc">
+        <div class="plateau" id="plateau">
+          <svg id="plateau-svg" viewBox="0 0 1000 620" role="img" aria-label="Plateau de jeu : le réseau d'autobus"></svg>
+          <div class="scene" id="scene" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="panneau">
+        <div class="bloc">
+          <div class="bloc-tete"><h2>Classement</h2><span class="note">Cliquer une équipe pour corriger</span></div>
+          <ol class="equipes" id="equipes"></ol>
+        </div>
+        <div class="bloc action" id="action"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ fin de partie -->
+    <section id="vue-fin" hidden></section>
+  </div>
+
+  <!-- ============================================================ dialogues -->
+  <dialog class="dialogue" id="dlg-billet">
+    <form method="dialog">
+      <h2 id="billet-titre">Billet d'or !</h2>
+      <p id="billet-texte"></p>
+      <div class="actions">
+        <button class="btn btn-secondaire" value="non">Passer</button>
+        <button class="btn btn-principal" value="oui" id="billet-acheter">Acheter</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue" id="dlg-boutique">
+    <form method="dialog">
+      <h2 id="boutique-titre">Dépanneur</h2>
+      <p class="note" id="boutique-texte"></p>
+      <div class="choix-objets" id="boutique-objets"></div>
+      <div class="actions"><button class="btn btn-secondaire" value="rien">Ne rien acheter</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue" id="dlg-fantome">
+    <form method="dialog">
+      <h2 id="fantome-titre">Le fantôme du garage</h2>
+      <p class="note">Choisissez l'équipe à visiter et ce que le fantôme doit voler.</p>
+      <div class="segment" id="fantome-quoi" role="group" aria-label="Quoi voler">
+        <button type="button" data-quoi="kwh" class="choisi">Des kWh (4 à 12)</button>
+        <button type="button" data-quoi="billet" id="fantome-billet">Un Billet d'or</button>
+      </div>
+      <div class="choix-equipes" id="fantome-equipes"></div>
+      <div class="actions"><button class="btn btn-principal" value="ok" id="fantome-ok" disabled>Envoyer le fantôme</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue" id="dlg-ajuster">
+    <form method="dialog">
+      <h2 id="ajuster-titre">Corriger</h2>
+      <p class="note">Pour réparer une erreur de saisie ou donner un prix spécial. Chaque correction est notée au journal.</p>
+      <div class="ajuster-ligne"><strong>kWh</strong><div class="boutons" data-champ="kwh">
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="-5">−5</button>
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="-1">−1</button>
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="1">+1</button>
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="5">+5</button>
+      </div></div>
+      <div class="ajuster-ligne"><strong>Billets d'or</strong><div class="boutons" data-champ="billets">
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="-1">−1</button>
+        <button type="button" class="btn btn-secondaire btn-petit" data-delta="1">+1</button>
+      </div></div>
+      <p id="ajuster-etat" class="info"></p>
+      <div class="actions"><button class="btn btn-principal" value="fermer">Fermer</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue dialogue-large" id="dlg-journal">
+    <form method="dialog">
+      <h2>Journal de la partie</h2>
+      <ol class="journal" id="journal"></ol>
+      <div class="actions"><button class="btn btn-principal" value="fermer">Fermer</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue" id="dlg-confirmer">
+    <form method="dialog">
+      <h2 id="confirmer-titre"></h2>
+      <p id="confirmer-texte"></p>
+      <div class="actions">
+        <button class="btn btn-secondaire" value="non">Annuler</button>
+        <button class="btn btn-principal" value="oui">Confirmer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

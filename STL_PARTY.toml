@@ -1,0 +1,91 @@
+# =====================================================================================
+#  STL Party — configuration unique (lue au démarrage d'une nouvelle partie)
+#  Une partie en cours garde sa propre copie des réglages : modifier ce fichier n'affecte
+#  que les prochaines parties.
+# =====================================================================================
+
+[application]
+hote = "127.0.0.1"      # "0.0.0.0" pour y accéder depuis un autre poste du réseau
+port = 3510
+
+[partie]
+nb_tours = 6                       # un mini-jeu par tour
+kwh_depart = 10
+prix_billet = 20                   # prix d'un Billet d'or quand on passe dessus
+prix_vol_billet = 30               # prix pour faire voler un Billet d'or par le fantôme
+max_objets = 3                     # objets par équipe
+gains_mini_jeu = [10, 6, 4, 2, 0]  # kWh gagnés selon le rang au mini-jeu (1er, 2e, ...)
+des_mini_jeu = [3, 3, 2, 2, 2]     # nombre de dés lancés selon le rang au mini-jeu
+bonus_dernier_tour = 10            # kWh donnés à l'équipe dernière au début du dernier tour
+
+[cases]
+recharge = 3      # case Recharge : + kWh
+bouchon = 3       # case Bouchon : − kWh
+terminus = 5      # passage au Terminus : + kWh
+
+[plateau]
+# T Terminus · R Recharge · B Bouchon · E Événement · I Inspecteur · F Fantôme du garage
+# D Détour · M Dépanneur (boutique). Le plateau est une boucle ; la première case doit être T.
+cases = "T R R E R M B R F R E R I R D B R E R R M R B F R E R I R D R B"
+
+# ------------------------------------------------------------------ mini-jeux (un par tour, dans l'ordre)
+[[mini_jeux]]
+nom = "Quiz du réseau"
+description = "Cinq questions sur la STL : lignes, terminus, anecdotes. Le premier qui lève la main répond ; 1 point par bonne réponse."
+toute_equipe = false
+
+[[mini_jeux]]
+nom = "Pile à 10 secondes"
+description = "Chaque joueur démarre un chrono et l'arrête à l'aveugle quand il croit être à 10 secondes. Le plus proche gagne."
+toute_equipe = false
+
+[[mini_jeux]]
+nom = "L'estimation"
+description = "Une question chiffrée sur la flotte (km roulés, kWh rechargés, nombre d'arrêts…). Chacun écrit sa réponse ; le plus proche gagne."
+toute_equipe = false
+
+[[mini_jeux]]
+nom = "Roche-papier-ciseaux"
+description = "Tournoi à élimination directe. L'ordre d'élimination donne le classement."
+toute_equipe = false
+
+[[mini_jeux]]
+nom = "Dessine-moi un autobus"
+description = "30 secondes pour dessiner un autobus électrique les yeux fermés. Vote de la salle à main levée."
+toute_equipe = false
+
+[[mini_jeux]]
+nom = "Finale : la tour de gobelets"
+description = "Toute l'équipe construit la plus haute tour de gobelets en 60 secondes, une seule main par personne."
+toute_equipe = true
+
+# ------------------------------------------------------------------ objets (utilisables pendant l'échange)
+[[objets]]
+id = "bouclier"
+nom = "Bouclier"
+prix = 15
+description = "Votre cadeau ne peut pas être volé pendant les 3 prochains tours de l'échange."
+
+[[objets]]
+id = "vol_express"
+nom = "Vol express"
+prix = 12
+description = "Volez un cadeau même s'il est gelé (déjà volé le nombre maximal de fois)."
+
+[[objets]]
+id = "correspondance"
+nom = "Correspondance"
+prix = 10
+description = "Échangez votre cadeau contre celui de n'importe qui, sans négociation."
+
+[[objets]]
+id = "retard"
+nom = "Retard"
+prix = 8
+description = "Passez votre tour : vous choisirez en tout dernier."
+
+[[objets]]
+id = "gel"
+nom = "Gel"
+prix = 8
+description = "Un joueur de votre choix ne peut pas voler à son prochain tour."

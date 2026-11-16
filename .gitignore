@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.venv/
+
+# Parties (état, historique, archives) : jamais dans git
+PARTIES/
+
+# Logo officiel : fourni sur le poste, pas redessiné
+app/static/logo-stl.svg
