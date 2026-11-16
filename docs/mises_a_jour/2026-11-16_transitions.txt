@@ -1,0 +1,9 @@
+2026-11-16 — Transitions stylisées
+
+- Le pion avance arrêt par arrêt (0,43 s par arrêt) avec un petit bond ; chaque case traversée s'éclaire au passage
+  et la scène compte les arrêts restants (« Encore 5 arrêts… », « Arrivé ! »).
+- À l'arrivée, coup de projecteur : le plateau s'assombrit, la case grossit, brille et émet des ondes.
+- La page de garde s'ouvre ensuite en cercle à partir de la case, avec des anneaux, l'illustration qui tourne en
+  grossissant et les textes qui glissent l'un après l'autre ; après « Continuer », le cercle se referme sur la case.
+- Même enchaînement pour les pages de garde du Billet d'or et du dépanneur. En mode Noël, la lueur est dorée.
+- Tout est désactivé sous prefers-reduced-motion (affichage direct).

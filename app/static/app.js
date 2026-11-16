@@ -223,11 +223,13 @@ function dessinerPlateau() {
   const valeurs = { R: `+${r.recharge}`, B: `−${r.bouchon}` };
   const cases = e.plateau.map((c, i) => {
     const [x, y] = pts[i];
-    return `<g class="case c-${c}" transform="translate(${x},${y})"><title>${LIBELLES[c]}</title>
+    return `<g class="case c-${c}" data-i="${i}" transform="translate(${x},${y})"><title>${LIBELLES[c]}</title>
+      <rect class="halo-case" x="-32" y="-32" width="64" height="64"></rect>
+      <g class="case-corps">
       <rect x="-32" y="-32" width="64" height="64"></rect>
       ${c === "E" ? '<rect class="ruban" x="-4" y="-32" width="8" height="64"></rect><rect class="ruban" x="-32" y="-4" width="64" height="8"></rect>' : ""}
       ${c === "F" ? FANTOME : `<text class="symbole" y="-6">${valeurs[c] || SYMBOLES[c]}</text>`}
-      <text class="libelle" y="20">${LIBELLES[c]}</text></g>`;
+      <text class="libelle" y="20">${LIBELLES[c]}</text></g></g>`;
   }).join("");
   const [bx, by] = pts[e.position_billet];
   const etoile = (cx, cy, R, r2) => Array.from({ length: 10 }, (_, k) => {
@@ -256,14 +258,14 @@ function dessinerPions(actif) {
   const courant = actif ?? (e.phase === "deplacement" ? e.courant : null);
   if (!groupe.children.length) {
     groupe.innerHTML = e.equipes.map((q) =>
-      `<g class="p-${q.id % 8}" data-id="${q.id}"><title>${echapper(q.nom)}</title><circle r="14"></circle><text>${q.id + 1}</text></g>`).join("");
+      `<g class="p-${q.id % 8}" data-id="${q.id}"><title>${echapper(q.nom)}</title><g class="saut"><circle r="14"></circle><text>${q.id + 1}</text></g></g>`).join("");
   }
   // le pion actif est dessiné en dernier, par-dessus les autres
   e.equipes.forEach((q) => {
     const g = groupe.querySelector(`[data-id="${q.id}"]`);
     const [x, y] = pts[positions[q.id] ?? q.position];
     const [dx, dy] = DECALAGES[q.id % 8];
-    g.setAttribute("transform", `translate(${x + dx},${y + dy})`);
+    g.style.transform = `translate(${x + dx}px, ${y + dy}px)`;   // en CSS pour profiter de la transition
     g.classList.toggle("actif", q.id === courant);
   });
   const g = groupe.querySelector(`[data-id="${courant}"]`);
@@ -327,8 +329,7 @@ const GARDES = {
 };
 
 /** Page de garde plein écran : grande illustration, attend « Continuer » (ou Entrée). */
-function montrerGrandEcran(ev) {
-  return new Promise((resoudre) => {
+async function montrerGrandEcran(ev, origine) {
     const ecran = $("#ecran-geant");
     ecran.className = `ecran-geant ${ev.ton || ""}${ev.classe ? ` ${ev.classe}` : ""}`;
     $("#geant-illustration").innerHTML = ev.illustration || ILLUSTRATIONS.evenement(ev.code);
@@ -347,14 +348,74 @@ function montrerGrandEcran(ev) {
       const o = etat().reglages.objets.find((x) => x.id === ev.objet);
       if (o) $("#geant-illustration").innerHTML = imageObjet(o);
     }
+    // ouverture en cercle depuis la case (ou le centre de l'écran)
+    const x = origine ? origine.x : innerWidth / 2;
+    const y = origine ? origine.y : innerHeight / 2;
+    const rayon = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const cercle = (r) => `circle(${r}px at ${x}px ${y}px)`;
+    ecran.style.setProperty("--x", `${x}px`);
+    ecran.style.setProperty("--y", `${y}px`);
     ecran.hidden = false;
+    ecran.classList.add("entree");
+    if (!MOUVEMENT_REDUIT && ecran.animate) {
+      await ecran.animate([{ clipPath: cercle(0) }, { clipPath: cercle(rayon) }],
+        { duration: 800, easing: "cubic-bezier(.65,0,.35,1)" }).finished;
+    }
     const bouton = $("#geant-continuer");
     bouton.focus();
-    bouton.addEventListener("click", () => { ecran.hidden = true; resoudre(); }, { once: true });
-  });
+    await new Promise((ok) => bouton.addEventListener("click", ok, { once: true }));
+    // fermeture : le cercle se referme sur la case
+    ecran.classList.remove("entree");
+    if (!MOUVEMENT_REDUIT && ecran.animate) {
+      await ecran.animate([{ clipPath: cercle(rayon) }, { clipPath: cercle(0) }],
+        { duration: 550, easing: "cubic-bezier(.65,0,.35,1)" }).finished;
+    }
+    ecran.hidden = true;
 }
 
 // ------------------------------------------------------------------------------ animations
+const PAS_MS = 430;   // durée d'un arrêt : le pion avance posément
+
+function sauter(id) {
+  const g = document.querySelector(`#pions [data-id="${id}"] .saut`);
+  if (!g || MOUVEMENT_REDUIT) return;
+  g.classList.remove("bondit");
+  void g.getBoundingClientRect();   // relance l'animation CSS
+  g.classList.add("bondit");
+}
+
+function allumerPassage(i) {
+  const c = document.querySelector(`#plateau-svg .case[data-i="${i}"]`);
+  if (!c) return;
+  c.classList.remove("passage");
+  void c.getBoundingClientRect();
+  c.classList.add("passage");
+}
+
+/** Coup de projecteur : le plateau s'assombrit, la case grossit et brille. */
+async function illuminer(i) {
+  const svgEl = $("#plateau-svg");
+  const c = svgEl && document.querySelector(`#plateau-svg .case[data-i="${i}"]`);
+  if (!c || $("#vue-jeu").hidden) return;
+  c.parentNode.insertBefore(c, $("#pions"));   // au-dessus des autres cases, sous les pions
+  svgEl.classList.add("projecteur");
+  c.classList.add("illuminee");
+  await attendre(1300);
+}
+
+function eteindre() {
+  const svgEl = $("#plateau-svg");
+  if (svgEl) svgEl.classList.remove("projecteur");
+  document.querySelectorAll("#plateau-svg .case.illuminee").forEach((c) => c.classList.remove("illuminee"));
+}
+
+function centreCase(i) {
+  const c = document.querySelector(`#plateau-svg .case[data-i="${i}"] .case-corps`);
+  if (!c || $("#vue-jeu").hidden) return null;
+  const r = c.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 async function rejouer(anim, nouvelle) {
   const ancienne = partie;
   if (!anim || !ancienne || !ancienne.etat || !nouvelle.etat || !["deplacement", "tour", "mini_jeu"].includes(anim.type)) {
@@ -382,15 +443,23 @@ async function rejouer(anim, nouvelle) {
       $("#total").textContent = anim.des.length > 1 ? `${anim.des.join(" + ")} = ${anim.total} arrêts` : `${anim.total} arrêt${anim.total > 1 ? "s" : ""}`;
       await attendre(1100);
     }
-    for (const pos of anim.chemin) {
+    for (const [k, pos] of anim.chemin.entries()) {
+      const reste = anim.chemin.length - k - 1;
       positions[id] = pos;
       dessinerPions(id);
-      await attendre(260);
+      sauter(id);
+      allumerPassage(pos);
+      if ($("#total")) $("#total").textContent = reste ? `Encore ${reste} arrêt${reste > 1 ? "s" : ""}…` : "Arrivé !";
+      await attendre(PAS_MS);
     }
   }
   partie = nouvelle;
   for (const ev of anim.evenements || []) {
-    await montrerGrandEcran(ev);   // chaque événement a sa page de garde
+    // la case de l'événement s'illumine, puis la page de garde s'ouvre en cercle depuis cette case
+    const i = ev.code === "terminus" ? 0 : positions[ev.equipe ?? anim.equipe];
+    await illuminer(i);
+    await montrerGrandEcran(ev, centreCase(i));
+    eteindre();
     if (ev.saut !== undefined || ev.echange || ev.billet) {   // téléportations : on synchronise
       synchroniserPositions();
       dessinerPlateau();
@@ -495,11 +564,13 @@ async function ouvrirDecision() {
       const cle = `billet-${etat().tour}-${q.id}-${q.position}-${att.reste}`;
       if (gardeDepanneur !== cle) {
         gardeDepanneur = cle;
+        await illuminer(q.position);
         await montrerGrandEcran({
           code: "billet", titre: "Billet d'or", surtitre: `Arrêt ${q.position + 1}`, equipe: q.id,
           phrase_equipe: "passe sur le Billet d'or", illustration: ILLUSTRATIONS.billet(),
           texte: `À vendre pour ${fr(att.prix)} kWh. ${q.nom} en a ${fr(q.kwh)}. On l'achète ?`,
-        });
+        }, centreCase(q.position));
+        eteindre();
       }
       $("#billet-titre").innerHTML = `${pion(q.id)} Billet d'or !`;
       $("#billet-texte").textContent = `${q.nom} passe sur le Billet d'or. L'acheter pour ${fr(att.prix)} kWh ? (Il vous reste ${fr(q.kwh)} kWh.)`;
@@ -511,11 +582,13 @@ async function ouvrirDecision() {
       const cle = `${etat().tour}-${q.id}-${q.position}-${att.reste}`;
       if (gardeDepanneur !== cle) {
         gardeDepanneur = cle;
+        await illuminer(q.position);
         await montrerGrandEcran({
           classe: "garde-depanneur", surtitre: `Arrêt ${q.position + 1}`, titre: "Dépanneur",
           texte: `${fr(q.kwh)} kWh en poche, ${q.objets.length} objet${q.objets.length > 1 ? "s" : ""} sur ${max} dans le sac. On entre magasiner ?`,
           equipe: q.id, phrase_equipe: "s'arrête au dépanneur", illustration: ILLUSTRATIONS.depanneur(),
-        });
+        }, centreCase(q.position));
+        eteindre();
       }
       $("#boutique-titre").innerHTML = `${pion(q.id, "pion pion-grand")} ${echapper(q.nom)}`;
       $("#boutique-kwh").textContent = fr(q.kwh);

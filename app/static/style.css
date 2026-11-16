@@ -133,6 +133,17 @@ p { margin: 0; }
 .route { fill: none; stroke: var(--bordure); stroke-width: 22; stroke-linejoin: round; }
 .route-pointillee { fill: none; stroke: var(--blanc); stroke-width: 3; stroke-dasharray: 10 12; }
 .case rect { stroke: var(--marine); stroke-width: 2; }
+/* Projecteur : la case d'arrivée grossit et brille, le reste du plateau s'assombrit */
+.case-corps { transform-box: fill-box; transform-origin: center; transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), filter .5s; }
+#plateau-svg .case .halo-case { fill: none; stroke: var(--cyan); stroke-width: 5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.case.passage .case-corps { animation: eclat .5s ease-out; }
+@keyframes eclat { 35% { filter: brightness(1.25) drop-shadow(0 0 6px var(--cyan)); } }
+#plateau-svg .route, #plateau-svg .route-pointillee, #plateau-svg .case, #plateau-svg .billet { transition: opacity .45s; }
+#plateau-svg.projecteur .route, #plateau-svg.projecteur .route-pointillee,
+#plateau-svg.projecteur .case:not(.illuminee), #plateau-svg.projecteur .billet { opacity: .25; }
+.case.illuminee .case-corps { transform: scale(1.5); filter: drop-shadow(0 0 4px var(--blanc)) drop-shadow(0 0 16px var(--cyan)); }
+.case.illuminee .halo-case { animation: onde 1s ease-out infinite; }
+@keyframes onde { 0% { transform: scale(1.2); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
 .case text { font-family: var(--police); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .case .symbole { font-size: 24px; }
 .case .libelle { font-size: 10px; }
@@ -150,7 +161,10 @@ p { margin: 0; }
 @keyframes halo { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
 .pions-svg circle { stroke: var(--marine); stroke-width: 2.5; }
 .pions-svg text { font-family: var(--police); font-weight: 700; font-size: 15px; text-anchor: middle; dominant-baseline: central; }
-.pions-svg g { transition: transform .22s ease-out; }
+.pions-svg > g { transition: transform .34s cubic-bezier(.45, 0, .25, 1); }
+.pions-svg .saut { transform-box: fill-box; transform-origin: center bottom; }
+.pions-svg .saut.bondit { animation: bond .4s ease-out; }
+@keyframes bond { 0% { transform: none; } 40% { transform: translateY(-18px) scale(1.08, .94); } 75% { transform: translateY(2px) scale(.96, 1.05); } 100% { transform: none; } }
 .pions-svg g.actif circle { stroke: var(--cyan); stroke-width: 4; }
 .pions-svg .p-0 circle { fill: var(--marine); } .pions-svg .p-0 text { fill: var(--blanc); }
 .pions-svg .p-1 circle { fill: var(--cyan); } .pions-svg .p-1 text { fill: var(--marine); }
@@ -298,16 +312,34 @@ p { margin: 0; }
 /* ------------------------------------------------------------------ écran géant : case Événement */
 .ecran-geant {
   position: fixed; inset: 0; z-index: 40; background: var(--marine); color: var(--blanc);
-  display: flex; align-items: center; justify-content: center; padding: 5vh 5vw; animation: apparition .3s ease-out;
+  display: flex; align-items: center; justify-content: center; padding: 5vh 5vw; overflow: hidden;
   border-top: 14px solid var(--cyan);
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--marine-survol), var(--marine) 60%);
 }
+/* Anneaux qui partent de la case au moment où la page s'ouvre */
+.ecran-geant::before, .ecran-geant::after {
+  content: ""; position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: 0; height: 0;
+  border-radius: 50%; border: 5px solid var(--cyan); opacity: 0; pointer-events: none; transform: translate(-50%, -50%);
+}
+.ecran-geant.entree::before { animation: anneau 1.4s .15s ease-out both; }
+.ecran-geant.entree::after { animation: anneau 1.4s .45s ease-out both; border-color: var(--blanc); }
+@keyframes anneau { 0% { width: 40px; height: 40px; opacity: .9; } 100% { width: 280vmax; height: 280vmax; opacity: 0; } }
+/* Entrée du contenu : l'illustration tourne et grossit, les textes glissent l'un après l'autre */
+.ecran-geant.entree .geant-illustration { animation: entree-illustration .75s .35s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes entree-illustration { from { transform: scale(.4) rotate(-10deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.ecran-geant.entree .geant-texte > * { animation: glisse .55s cubic-bezier(.2, .8, .2, 1) both; }
+.ecran-geant.entree .geant-texte > :nth-child(1) { animation-delay: .5s; }
+.ecran-geant.entree .geant-texte > :nth-child(2) { animation-delay: .62s; }
+.ecran-geant.entree .geant-texte > :nth-child(3) { animation-delay: .74s; }
+.ecran-geant.entree .geant-texte > :nth-child(4) { animation-delay: .86s; }
+.ecran-geant.entree .geant-texte > :nth-child(5) { animation-delay: 1s; }
+@keyframes glisse { from { transform: translateX(70px); opacity: 0; } to { transform: none; opacity: 1; } }
 .ecran-geant.bon { border-top-color: var(--vert); }
 .ecran-geant.mauvais { border-top-color: var(--gris); }
 .ecran-geant-int { width: 100%; max-width: 1600px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 5vw; align-items: center; }
 .geant-illustration { background: var(--blanc); aspect-ratio: 1; max-height: 78vh; padding: 3vh; margin: 0 auto; width: 100%; }
 .ecran-geant.mauvais .geant-illustration { background: repeating-linear-gradient(45deg, var(--blanc) 0 14px, var(--gris-pale) 14px 28px); }
-.geant-illustration svg { width: 100%; height: 100%; display: block; animation: rebond .6s ease-out; }
-@keyframes rebond { 0% { transform: scale(.6) rotate(-6deg); } 60% { transform: scale(1.06) rotate(2deg); } 100% { transform: none; } }
+.geant-illustration svg, .geant-illustration img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .geant-texte { display: flex; flex-direction: column; gap: 3vh; align-items: flex-start; }
 .geant-texte .surtitre { color: var(--cyan); font-size: clamp(16px, 1.5vw, 24px); }
 .ecran-geant.bon .surtitre { color: var(--vert); }
@@ -323,7 +355,10 @@ p { margin: 0; }
   min-height: 72px; padding: 12px 48px;
 }
 .geant-continuer:hover { background: var(--bleu-pale); }
-body.noel .ecran-geant { border-top-color: var(--noel-rouge); background-image: radial-gradient(circle at 90% 0%, rgba(212,160,23,.25), transparent 50%); }
+body.noel .ecran-geant { border-top-color: var(--noel-rouge); }
+body.noel .ecran-geant::before { border-color: var(--noel-or); }
+body.noel .case.illuminee .case-corps { filter: drop-shadow(0 0 4px var(--blanc)) drop-shadow(0 0 16px var(--noel-or)); }
+body.noel .case .halo-case { stroke: var(--noel-or); }
 
 /* ------------------------------------------------------------------ fin de partie */
 .bonus-liste { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -475,7 +510,9 @@ body.noel .dialogue { border-top-color: var(--noel-rouge); }
 }
 @media (prefers-reduced-motion: reduce) {
   .billet .halo, .de.roule, .carte-ev, .ecran-geant, .geant-illustration svg { animation: none; }
-  .pions-svg g { transition: none; }
+  .pions-svg > g, .case-corps, #plateau-svg .case { transition: none; }
+  .ecran-geant.entree::before, .ecran-geant.entree::after, .ecran-geant.entree .geant-illustration,
+  .ecran-geant.entree .geant-texte > *, .case.illuminee .halo-case, .case.passage .case-corps, .pions-svg .saut.bondit { animation: none; }
   .guirlande { animation: none; }
   .neige { display: none !important; }
 }
