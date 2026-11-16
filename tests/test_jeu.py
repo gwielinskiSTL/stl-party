@@ -249,3 +249,32 @@ def test_chaque_evenement_a_un_code(cfg, equipes, graine):
                 anim = jeu.decider(etat, {"cible": h.choice(autres), "quoi": "kwh"})
         for ev in anim.get("evenements", []):
             assert ev.get("code"), ev
+
+
+def test_evenements_dates_sur_le_trajet(cfg, equipes):
+    """Un achat en route est annoncé tout de suite (étape 0), le passage au Terminus à sa case, l'arrivée à la fin."""
+    etat = jeu.nouvelle_partie(cfg, equipes)
+    etat["plateau"] = ["T", "M"] + ["R"] * 30
+    etat["position_billet"] = 20
+    jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+    eq = etat["equipes"][0]
+    eq["position"], eq["kwh"] = 28, 50
+    jeu.lancer(etat)                                   # 3 dés : passe le Terminus (case 0), s'arrête au dépanneur (1)
+    assert etat["attente"]["type"] == "boutique"
+    reste = etat["attente"]["reste"]
+    anim = jeu.decider(etat, {"objet": "retard"})
+    achat = anim["evenements"][0]
+    assert achat["code"] == "achat" and achat["etape"] == 0
+    arrivee = anim["evenements"][-1]
+    assert arrivee["code"] == "recharge" and arrivee["etape"] == len(anim["chemin"]) == reste
+
+
+def test_terminus_annonce_a_sa_case(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes)
+    etat["plateau"] = ["T"] + ["R"] * 31
+    etat["position_billet"] = 20
+    jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+    etat["equipes"][0]["position"] = 30
+    anim = jeu.lancer(etat)
+    terminus = next(ev for ev in anim["evenements"] if ev["code"] == "terminus")
+    assert anim["chemin"][terminus["etape"] - 1] == 0

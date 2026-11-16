@@ -1,0 +1,6 @@
+2026-11-16 — Événements annoncés au moment où ils arrivent
+
+- Correctif : un achat (dépanneur, Billet d'or) confirmé en cours de route n'était annoncé qu'à l'arrivée du pion ;
+  idem pour le passage au Terminus ou au dépanneur. Chaque événement est maintenant daté par « etape » (nombre de
+  cases parcourues) et l'interface arrête le pion sur la bonne case le temps de sa page de garde, puis reprend la
+  route (« On reprend la route : N arrêts »).

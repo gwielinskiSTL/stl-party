@@ -426,6 +426,21 @@ function centreCase(i) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
+/** Montre les événements survenus après « etape » cases (tous si etape est null). */
+async function annoncer(anim, etape) {
+  const fin = (anim.chemin || []).length;
+  for (const ev of anim.evenements || []) {
+    if (etape !== null && (ev.etape ?? fin) !== etape) continue;
+    // la case de l'événement s'illumine, puis la page de garde s'ouvre en cercle depuis cette case
+    const i = ev.code === "terminus" ? 0 : positions[ev.equipe ?? anim.equipe];
+    await illuminer(i);
+    await montrerGrandEcran(ev, centreCase(i));
+    eteindre();
+    if (ev.billet) dessinerPlateau();   // le Billet d'or change de place ; les pions restent où ils sont
+    if (ev.saut !== undefined || ev.echange) { synchroniserPositions(); dessinerPlateau(); }   // téléportations
+  }
+}
+
 async function rejouer(anim, nouvelle) {
   const ancienne = partie;
   if (!anim || !ancienne || !ancienne.etat || !nouvelle.etat || !["deplacement", "tour", "mini_jeu"].includes(anim.type)) {
@@ -453,6 +468,12 @@ async function rejouer(anim, nouvelle) {
       $("#total").textContent = anim.des.length > 1 ? `${anim.des.join(" + ")} = ${anim.total} arrêts` : `${anim.total} arrêt${anim.total > 1 ? "s" : ""}`;
       await attendre(1100);
     }
+    if (!(anim.des && anim.des.length) && anim.chemin.length) {   // après un achat : on reprend la route
+      $("#scene").innerHTML = `<div class="scene-titre">${pion(id)} ${echapper(equipe(id).nom)}</div>
+        <div class="total" id="total">On reprend la route : ${anim.chemin.length} arrêt${anim.chemin.length > 1 ? "s" : ""}</div>`;
+    }
+    partie = nouvelle;   // positions affichées : la table « positions », mise à jour arrêt par arrêt
+    await annoncer(anim, 0);   // ce qui arrive avant de bouger (ex. achat juste confirmé)
     for (const [k, pos] of anim.chemin.entries()) {
       const reste = anim.chemin.length - k - 1;
       positions[id] = pos;
@@ -461,19 +482,11 @@ async function rejouer(anim, nouvelle) {
       allumerPassage(pos);
       if ($("#total")) $("#total").textContent = reste ? `Encore ${reste} arrêt${reste > 1 ? "s" : ""}…` : "Arrivé !";
       await attendre(PAS_MS);
+      await annoncer(anim, k + 1);   // le pion s'arrête le temps de l'événement survenu sur cette case
     }
-  }
-  partie = nouvelle;
-  for (const ev of anim.evenements || []) {
-    // la case de l'événement s'illumine, puis la page de garde s'ouvre en cercle depuis cette case
-    const i = ev.code === "terminus" ? 0 : positions[ev.equipe ?? anim.equipe];
-    await illuminer(i);
-    await montrerGrandEcran(ev, centreCase(i));
-    eteindre();
-    if (ev.saut !== undefined || ev.echange || ev.billet) {   // téléportations : on synchronise
-      synchroniserPositions();
-      dessinerPlateau();
-    }
+  } else {
+    partie = nouvelle;
+    await annoncer(anim, null);
   }
   const evs = anim.evenements || [];
   derniereScene = evs.length ? carteEvenement(evs[evs.length - 1], true) : null;

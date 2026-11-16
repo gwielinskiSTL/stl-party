@@ -26,6 +26,25 @@ NOMS_CASES = {
 }
 
 
+class _Evenements(list):
+    """Événements d'un déplacement : chacun est daté par « etape », le nombre de cases déjà parcourues quand il
+    survient (0 = avant de bouger). L'interface les montre à ce moment du trajet, pas à l'arrivée."""
+
+    def __init__(self, anim: dict):
+        super().__init__()
+        self._anim = anim
+
+    def append(self, ev: dict):
+        ev.setdefault("etape", len(self._anim.get("chemin", [])))
+        super().append(ev)
+
+
+def _animation_deplacement(eq: dict, des: list[int]) -> dict:
+    anim = {"type": "deplacement", "equipe": eq["id"], "des": des, "total": sum(des), "chemin": []}
+    anim["evenements"] = _Evenements(anim)
+    return anim
+
+
 class ErreurJeu(Exception):
     def __init__(self, message: str, code: int = 400):
         super().__init__(message)
@@ -181,7 +200,7 @@ def lancer(etat: dict) -> dict:
     des = [hasard.randint(1, 6) for _ in range(nb)]
     total = sum(des)
     _noter(etat, f"{eq['nom']} lance {nb} dé{'s' if nb > 1 else ''} : {' + '.join(map(str, des))} = {total}.")
-    anim = {"type": "deplacement", "equipe": eq["id"], "des": des, "total": total, "chemin": [], "evenements": []}
+    anim = _animation_deplacement(eq, des)
     _avancer(etat, eq, total, anim)
     return anim
 
@@ -320,7 +339,7 @@ def decider(etat: dict, decision: dict) -> dict:
     if not att:
         raise ErreurJeu("Aucune décision n'est attendue.", 409)
     eq = _eq(etat, att["equipe"])
-    anim = {"type": "deplacement", "equipe": eq["id"], "des": [], "total": 0, "chemin": [], "evenements": []}
+    anim = _animation_deplacement(eq, [])
 
     if att["type"] == "billet":
         if decision.get("acheter"):
