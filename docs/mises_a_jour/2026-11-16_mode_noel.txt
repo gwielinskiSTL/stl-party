@@ -1,0 +1,7 @@
+2026-11-16 — Mode Noël
+
+- Interrupteur « Mode Noël » dans l'en-tête : guirlande lumineuse, neige, rouge canneberge, or et vert sapin
+  conjugués au marine STL. Route en sucre d'orge, cases Événement en emballage cadeau, Billet d'or enfin doré.
+- Le choix est retenu par le navigateur ; STL_PARTY.toml ([application] mode_noel) fixe la valeur par défaut.
+- Exception assumée à la charte, limitée à body.noel : le rouge des alertes reste le rouge STL, distinct du rouge
+  décoratif. Neige et clignotement désactivés sous prefers-reduced-motion et à l'impression.

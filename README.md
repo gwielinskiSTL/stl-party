@@ -15,7 +15,8 @@ conda env create -f environment.yml      (une fois)
 lancer.bat                               (double-clic) — ou : conda activate stl-party && python -m app.main
 ```
 
-Puis http://127.0.0.1:3510. Pour y accéder d'un autre poste, mettre `hote = "0.0.0.0"` dans `STL_PARTY.toml`.
+Puis http://127.0.0.1:3510. L'interrupteur **Mode Noël** de l'en-tête ajoute les couleurs des fêtes (retenu par le
+navigateur ; `mode_noel = true` dans `STL_PARTY.toml` pour l'activer par défaut). Pour y accéder d'un autre poste, mettre `hote = "0.0.0.0"` dans `STL_PARTY.toml`.
 Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est absent, jamais redessiné).
 
 ## Déroulement (≈ 45 à 60 min pour 5 équipes de 5)

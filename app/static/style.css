@@ -9,6 +9,10 @@
   --bleu-pale: #d4edfc; --gris-pale: #f3f3f3; --gris: #767676; --blanc: #ffffff;
   --marine-doux: #8a8fb6; --cyan-doux: #80d4f0; --bordure: #c9cde0; --hachure: #d9d9d9;
   --marine-survol: #222e8c;
+  /* Mode Noël seulement (body.noel) : couleurs des fêtes conjuguées au marine STL.
+     Le rouge des alertes (--rouge) reste distinct du rouge canneberge décoratif. */
+  --noel-rouge: #a4161a; --noel-rouge-survol: #85120f; --noel-or: #d4a017; --noel-or-pale: #f6e7b8;
+  --noel-sapin: #1f6f43; --noel-sapin-survol: #175636; --noel-creme: #faf6ee;
   --texte: var(--marine);
   --police: "Sofia Pro", Arial, sans-serif;
   --largeur: 1920px;
@@ -287,6 +291,89 @@ p { margin: 0; }
 .objet-ligne.utilise span { text-decoration: line-through; color: var(--gris); }
 .objet-ligne small { display: block; color: var(--gris); font-size: 12.5px; }
 
+/* ------------------------------------------------------------------ interrupteur de l'en-tête */
+.interrupteur-entete .piste {
+  width: 26px; height: 14px; border-radius: 7px; background: rgba(255,255,255,.35); position: relative; flex: none;
+}
+.interrupteur-entete .bouton {
+  position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--blanc);
+  transition: transform .15s;
+}
+.interrupteur-entete[aria-pressed="true"] .piste { background: var(--noel-or); }
+.interrupteur-entete[aria-pressed="true"] .bouton { transform: translateX(12px); }
+
+/* =====================================================================================
+   MODE NOËL — exception assumée à la charte, active seulement avec body.noel.
+   Base STL conservée (marine, police, blocs droits) ; accents des fêtes : rouge canneberge,
+   or, vert sapin. Les alertes gardent le rouge STL et le texte reste marine ou blanc.
+   ===================================================================================== */
+.seulement-noel { display: none; }
+body.noel .seulement-noel { display: inline; }
+body.noel div.seulement-noel { display: block; }
+body.noel { background: var(--noel-creme); }
+
+/* Guirlande lumineuse sous l'en-tête */
+.guirlande {
+  height: 18px; background-color: var(--marine);
+  background-image:
+    radial-gradient(circle at 12px 9px, var(--noel-rouge) 0 5px, transparent 6px),
+    radial-gradient(circle at 36px 9px, var(--noel-or) 0 5px, transparent 6px),
+    radial-gradient(circle at 60px 9px, var(--vert) 0 5px, transparent 6px),
+    radial-gradient(circle at 84px 9px, var(--cyan) 0 5px, transparent 6px);
+  background-size: 96px 18px; border-bottom: 3px solid var(--noel-rouge);
+  animation: scintille 1.8s steps(2) infinite;
+}
+@keyframes scintille { 50% { filter: brightness(1.35) saturate(1.2); } }
+
+/* Neige : flocons créés par app.js, sans gêner les clics */
+.neige { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.neige i {
+  position: absolute; top: -12px; border-radius: 50%; background: var(--blanc);
+  box-shadow: 0 0 2px rgba(21,31,109,.35); animation: tombe linear infinite;
+}
+@keyframes tombe { to { transform: translate(var(--derive, 20px), 105vh); } }
+
+/* En-tête et flèche */
+body.noel .entete-stl { background-image: radial-gradient(circle at 85% -40%, rgba(212,160,23,.28), transparent 55%); }
+body.noel .fleche i:nth-child(n) { background: var(--noel-sapin); }
+body.noel .fleche i:nth-child(3), body.noel .fleche i:nth-child(7), body.noel .fleche i:nth-child(9) { background: var(--noel-or); }
+body.noel .fleche i:nth-child(4), body.noel .fleche i:nth-child(6), body.noel .fleche i:nth-child(8) { background: var(--noel-or); }
+body.noel .fleche i:nth-child(5) { background: var(--noel-rouge); box-shadow: 0 0 0 2px var(--blanc); }
+
+/* Blocs : un ruban rouge sur le dessus */
+body.noel .bloc { border-top: 4px solid var(--noel-rouge); }
+body.noel .bloc-tete h2::before { content: "✦ "; color: var(--noel-or); }
+
+/* Boutons : action principale en vert sapin */
+body.noel .btn-principal { background: var(--noel-sapin); border-color: var(--noel-sapin); }
+body.noel .btn-principal:hover:not([disabled]) { background: var(--noel-sapin-survol); }
+
+/* Plateau : route en sucre d'orge, cases Événement en emballage cadeau, Billet d'or… en or */
+body.noel .route { stroke: var(--noel-rouge); }
+body.noel .route-pointillee { stroke: var(--blanc); stroke-width: 12; stroke-dasharray: 9 9; }
+body.noel .c-E rect { fill: var(--noel-rouge); }
+body.noel .c-E text { fill: var(--blanc); }
+body.noel .c-E .ruban { display: block; }
+.c-E .ruban { display: none; fill: var(--noel-or); }
+body.noel .c-T rect { fill: var(--noel-sapin); }
+body.noel .c-M rect { stroke: var(--noel-rouge); }
+body.noel .billet polygon { fill: var(--noel-or); stroke: var(--marine); }
+body.noel .billet circle { fill: var(--blanc); }
+body.noel .billet .halo { stroke: var(--noel-or); }
+
+/* Cartes d'événement et classements */
+body.noel .carte-ev { border-top-color: var(--noel-rouge); }
+body.noel .carte-ev.bon { border-top-color: var(--noel-sapin); }
+body.noel .equipe.actif { border-color: var(--noel-sapin); }
+body.noel .badge-des { background: var(--noel-or-pale); }
+body.noel .podium li:first-child { background: var(--noel-sapin); }
+body.noel .podium li:first-child .rang { color: var(--noel-or-pale); }
+body.noel .bonus-carte:not(.cache) { border-top: 6px solid var(--noel-or); }
+body.noel .bonus-carte.cache { background: repeating-linear-gradient(45deg, var(--noel-rouge) 0 10px, var(--blanc) 10px 20px); }
+body.noel .bonus-carte.cache h3 { background: var(--blanc); padding: 4px 14px; }
+body.noel .info { background: var(--noel-or-pale); border-left-color: var(--noel-or); }
+body.noel .dialogue { border-top-color: var(--noel-rouge); }
+
 /* ------------------------------------------------------------------ petits écrans, impression, mouvement */
 @media (max-width: 1200px) {
   .jeu { grid-template-columns: 1fr; }
@@ -312,4 +399,7 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .billet .halo, .de.roule, .carte-ev { animation: none; }
   .pions-svg g { transition: none; }
+  .guirlande { animation: none; }
+  .neige { display: none !important; }
 }
+@media print { .guirlande, .neige { display: none !important; } }

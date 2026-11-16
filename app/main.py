@@ -114,6 +114,7 @@ def sante():
 def configuration():
     cfg = config.lire()
     return {"partie": cfg["partie"], "cases": cfg["cases"], "plateau": cfg["plateau"]["liste"],
+            "mode_noel": bool(cfg["application"].get("mode_noel", False)),
             "mini_jeux": cfg["mini_jeux"], "objets": cfg["objets"], "noms_cases": jeu.NOMS_CASES}
 
 

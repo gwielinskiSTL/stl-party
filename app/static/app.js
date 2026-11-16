@@ -69,6 +69,35 @@ async function agir(methode, url, corps) {
   }
 }
 
+// ------------------------------------------------------------------------------ mode Noël
+// Préférence propre à ce navigateur ; sinon, la valeur par défaut de STL_PARTY.toml ([application] mode_noel).
+const CLE_NOEL = "stl-party.mode-noel";
+
+function noelMemorise() {
+  try { const v = localStorage.getItem(CLE_NOEL); return v === null ? null : v === "1"; } catch (_) { return null; }
+}
+
+function appliquerNoel(actif, memoriser) {
+  document.body.classList.toggle("noel", actif);
+  $("#btn-noel").setAttribute("aria-pressed", String(actif));
+  if (actif) creerNeige();
+  if (memoriser) { try { localStorage.setItem(CLE_NOEL, actif ? "1" : "0"); } catch (_) { /* stockage indisponible */ } }
+}
+
+function creerNeige() {
+  const zone = $("#neige");
+  if (!zone || zone.children.length || MOUVEMENT_REDUIT) return;
+  zone.innerHTML = Array.from({ length: 45 }, () => {
+    const taille = (3 + Math.random() * 5).toFixed(1);
+    const duree = (9 + Math.random() * 12).toFixed(1);
+    return `<i style="left:${(Math.random() * 100).toFixed(1)}%;width:${taille}px;height:${taille}px;opacity:${(0.55 + Math.random() * 0.4).toFixed(2)};` +
+      `animation-duration:${duree}s;animation-delay:-${(Math.random() * duree).toFixed(1)}s;--derive:${Math.round(Math.random() * 80 - 40)}px"></i>`;
+  }).join("");
+}
+
+$("#btn-noel").addEventListener("click", () => appliquerNoel(!document.body.classList.contains("noel"), true));
+appliquerNoel(noelMemorise() ?? false, false);   // tout de suite, pour éviter un éclair aux couleurs normales
+
 // ------------------------------------------------------------------------------ démarrage
 async function demarrer() {
   try {
@@ -77,6 +106,7 @@ async function demarrer() {
     alerte(e.message);
     return;
   }
+  if (noelMemorise() === null) appliquerNoel(!!cfg.mode_noel, false);
   synchroniserPositions();
   afficher();
 }
@@ -191,6 +221,7 @@ function dessinerPlateau() {
     const [x, y] = pts[i];
     return `<g class="case c-${c}" transform="translate(${x},${y})"><title>${LIBELLES[c]}</title>
       <rect x="-32" y="-32" width="64" height="64"></rect>
+      ${c === "E" ? '<rect class="ruban" x="-4" y="-32" width="8" height="64"></rect><rect class="ruban" x="-32" y="-4" width="64" height="8"></rect>' : ""}
       ${c === "F" ? FANTOME : `<text class="symbole" y="-6">${valeurs[c] || SYMBOLES[c]}</text>`}
       <text class="libelle" y="20">${LIBELLES[c]}</text></g>`;
   }).join("");

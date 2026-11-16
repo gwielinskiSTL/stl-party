@@ -15,6 +15,16 @@ def test_sante_et_page():
 def test_configuration():
     c = client.get("/api/configuration").json()
     assert c["plateau"][0] == "T" and len(c["mini_jeux"]) == 6 and c["objets"]
+    assert c["mode_noel"] is False
+
+
+def test_mode_noel_par_defaut(monkeypatch, tmp_path):
+    from app import config
+    texte = config.chemin_config().read_text(encoding="utf-8").replace("mode_noel = false", "mode_noel = true")
+    autre = tmp_path / "config.toml"
+    autre.write_text(texte, encoding="utf-8")
+    monkeypatch.setenv("PARTY_CONFIG", str(autre))
+    assert client.get("/api/configuration").json()["mode_noel"] is True
 
 
 def test_flux_complet_et_annuler(equipes):

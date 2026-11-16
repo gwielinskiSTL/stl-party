@@ -14,7 +14,7 @@
         <span class="fleche" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <div>
           <div class="marque-nom">STL Party</div>
-          <div class="marque-sous">Échange de cadeaux · le jeu qui décide de l'ordre</div>
+          <div class="marque-sous"><span class="seulement-noel">Édition des fêtes · </span>Échange de cadeaux · le jeu qui décide de l'ordre</div>
         </div>
       </div>
       <div class="entete-stl-droite">
@@ -23,6 +23,10 @@
           <div><dt>Étape</dt><dd id="meta-phase">—</dd></div>
         </dl>
         <div class="boutons-entete">
+          <button class="btn-entete interrupteur-entete" id="btn-noel" aria-pressed="false" title="Mode Noël : couleurs des fêtes, guirlande et neige">
+            <span class="piste" aria-hidden="true"><span class="bouton"></span></span>
+            Mode Noël
+          </button>
           <button class="btn-entete" id="btn-annuler" title="Revenir à l'état d'avant la dernière action" hidden>
             <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.5 3.5L2 6l2.5 2.5M2 6h6.5a3.5 3.5 0 0 1 0 7H6"/></svg>
             Annuler
@@ -44,6 +48,8 @@
       </div>
     </div>
   </header>
+  <div class="guirlande seulement-noel" aria-hidden="true"></div>
+  <div class="neige seulement-noel" id="neige" aria-hidden="true"></div>
 
   <div class="page">
     <div id="alerte" class="alerte" role="alert" hidden></div>
