@@ -310,29 +310,40 @@ function carteEvenement(ev, petite) {
     ${petite ? "" : '<small>Cliquer pour continuer</small>'}</div>`;
 }
 
-/** Affiche une carte au centre jusqu'au clic ou pendant quelques secondes. */
-function montrerCarte(ev) {
-  return new Promise((resoudre) => {
-    $("#scene").innerHTML = carteEvenement(ev);
-    const carte = $("#scene .carte-ev");
-    const fin = () => { clearTimeout(minuterie); resoudre(); };
-    const minuterie = setTimeout(fin, MOUVEMENT_REDUIT ? 2500 : 4200);
-    carte.addEventListener("click", fin, { once: true });
-  });
-}
+// Page de garde de chaque événement : surtitre et phrase sous le titre, selon le code envoyé par le serveur
+const GARDES = {
+  terminus: ["Terminus", "passe au Terminus"],
+  billet_trop_cher: ["Billet d'or", "passe sur le Billet d'or"],
+  billet_achete: ["Billet d'or", "achète un Billet d'or"],
+  depanneur_passe: ["Dépanneur", "passe devant le dépanneur"],
+  achat: ["Dépanneur", "repart avec un objet"],
+  recharge: ["Case Recharge", "se branche"],
+  bouchon: ["Case Bouchon", "est coincé dans le trafic"],
+  inspecteur: ["Case Inspecteur", "se fait contrôler"],
+  fantome: ["Case Fantôme", "réveille le fantôme"],
+  fantome_resultat: ["Fantôme du garage", "envoie le fantôme"],
+  detour: ["Case Détour", "échangent"],
+  dernier_arret: ["Dernier tour", "reçoit un coup de pouce"],
+};
 
-/** Plein écran pour une case Événement : grande illustration, attend « Continuer » (ou Entrée). */
+/** Page de garde plein écran : grande illustration, attend « Continuer » (ou Entrée). */
 function montrerGrandEcran(ev) {
   return new Promise((resoudre) => {
     const ecran = $("#ecran-geant");
     ecran.className = `ecran-geant ${ev.ton || ""}${ev.classe ? ` ${ev.classe}` : ""}`;
     $("#geant-illustration").innerHTML = ev.illustration || ILLUSTRATIONS.evenement(ev.code);
-    $("#geant-surtitre").textContent = ev.surtitre || "Case Événement";
+    const [surtitre, phrase] = GARDES[ev.code] || ["Case Événement", "tombe sur une case Événement"];
+    $("#geant-surtitre").textContent = ev.surtitre || surtitre;
     $("#geant-titre").textContent = ev.titre;
     $("#geant-description").textContent = ev.texte;
-    $("#geant-equipe").innerHTML = ev.equipe !== undefined
-      ? `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} ${echapper(ev.phrase_equipe || "tombe sur une case Événement")}</span>` : "";
-    if (ev.objet) {   // prime : on montre aussi l'objet gagné
+    if (ev.code === "detour" && ev.equipes) {
+      $("#geant-equipe").innerHTML = ev.equipes.map((id) => `${pion(id, "pion pion-grand")} <span>${echapper(equipe(id).nom)}</span>`).join(" <span>⇄</span> ");
+    } else if (ev.equipe !== undefined) {
+      $("#geant-equipe").innerHTML = `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} ${echapper(ev.phrase_equipe || phrase)}</span>`;
+    } else {
+      $("#geant-equipe").innerHTML = "";
+    }
+    if (ev.objet) {   // prime ou achat : on montre l'objet obtenu
       const o = etat().reglages.objets.find((x) => x.id === ev.objet);
       if (o) $("#geant-illustration").innerHTML = imageObjet(o);
     }
@@ -379,7 +390,7 @@ async function rejouer(anim, nouvelle) {
   }
   partie = nouvelle;
   for (const ev of anim.evenements || []) {
-    await (ev.grand ? montrerGrandEcran(ev) : montrerCarte(ev));
+    await montrerGrandEcran(ev);   // chaque événement a sa page de garde
     if (ev.saut !== undefined || ev.echange || ev.billet) {   // téléportations : on synchronise
       synchroniserPositions();
       dessinerPlateau();
@@ -472,7 +483,7 @@ function ouvrirDialogue(id) {
 }
 
 let decisionOuverte = false;
-let gardeDepanneur = null;   // arrêt au dépanneur dont la page de garde a déjà été montrée
+let gardeDepanneur = null;   // arrêt (dépanneur ou Billet d'or) dont la page de garde a déjà été montrée
 async function ouvrirDecision() {
   const att = etat() && etat().attente;
   if (!att || decisionOuverte || occupe) return;
@@ -481,6 +492,15 @@ async function ouvrirDecision() {
   try {
     const q = equipe(att.equipe);
     if (att.type === "billet") {
+      const cle = `billet-${etat().tour}-${q.id}-${q.position}-${att.reste}`;
+      if (gardeDepanneur !== cle) {
+        gardeDepanneur = cle;
+        await montrerGrandEcran({
+          code: "billet", titre: "Billet d'or", surtitre: `Arrêt ${q.position + 1}`, equipe: q.id,
+          phrase_equipe: "passe sur le Billet d'or", illustration: ILLUSTRATIONS.billet(),
+          texte: `À vendre pour ${fr(att.prix)} kWh. ${q.nom} en a ${fr(q.kwh)}. On l'achète ?`,
+        });
+      }
       $("#billet-titre").innerHTML = `${pion(q.id)} Billet d'or !`;
       $("#billet-texte").textContent = `${q.nom} passe sur le Billet d'or. L'acheter pour ${fr(att.prix)} kWh ? (Il vous reste ${fr(q.kwh)} kWh.)`;
       const choix = await ouvrirDialogue("#dlg-billet");

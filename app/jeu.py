@@ -199,7 +199,7 @@ def _avancer(etat: dict, eq: dict, pas: int, anim: dict):
 
         if case == "T":
             gain = _gagner(etat, eq, reglages["cases"]["terminus"])
-            anim["evenements"].append({"titre": "Plein au garage !", "texte": f"{eq['nom']} passe au Terminus : +{gain} kWh.",
+            anim["evenements"].append({"code": "terminus", "equipe": eq["id"], "titre": "Plein au garage !", "texte": f"{eq['nom']} passe au Terminus : +{gain} kWh.",
                                        "ton": "bon"})
 
         if eq["position"] == etat["position_billet"]:
@@ -207,14 +207,14 @@ def _avancer(etat: dict, eq: dict, pas: int, anim: dict):
             if eq["kwh"] >= prix:
                 etat["attente"] = {"type": "billet", "equipe": eq["id"], "reste": pas, "prix": prix}
                 return
-            anim["evenements"].append({"titre": "Billet d'or", "texte": f"{eq['nom']} n'a pas les {prix} kWh pour acheter le Billet d'or.",
+            anim["evenements"].append({"code": "billet_trop_cher", "equipe": eq["id"], "titre": "Billet d'or", "texte": f"{eq['nom']} n'a pas les {prix} kWh pour acheter le Billet d'or.",
                                        "ton": "neutre"})
 
         if case == "M":
             if peut_magasiner(etat, eq):
                 etat["attente"] = {"type": "boutique", "equipe": eq["id"], "reste": pas}
                 return
-            anim["evenements"].append({"titre": "Dépanneur", "texte": f"{eq['nom']} passe au dépanneur sans pouvoir rien acheter.",
+            anim["evenements"].append({"code": "depanneur_passe", "equipe": eq["id"], "titre": "Dépanneur", "texte": f"{eq['nom']} passe au dépanneur sans pouvoir rien acheter.",
                                        "ton": "neutre"})
     _atterrir(etat, eq, anim)
 
@@ -227,16 +227,16 @@ def _atterrir(etat: dict, eq: dict, anim: dict):
 
     if case == "R":
         gain = _gagner(etat, eq, r["recharge"])
-        ev.append({"titre": "Recharge", "texte": f"{nom} se branche : +{gain} kWh.", "ton": "bon"})
+        ev.append({"code": "recharge", "equipe": eq["id"], "titre": "Recharge", "texte": f"{nom} se branche : +{gain} kWh.", "ton": "bon"})
     elif case == "B":
         perte = -_gagner(etat, eq, -int(r["bouchon"]))
         eq["stats"]["malchances"] += 1
-        ev.append({"titre": "Bouchon de circulation", "texte": f"{nom} est pris dans le trafic : −{perte} kWh.", "ton": "mauvais"})
+        ev.append({"code": "bouchon", "equipe": eq["id"], "titre": "Bouchon de circulation", "texte": f"{nom} est pris dans le trafic : −{perte} kWh.", "ton": "mauvais"})
     elif case == "I":
         perte = eq["kwh"] // 2
         _gagner(etat, eq, -perte)
         eq["stats"]["malchances"] += 1
-        ev.append({"titre": "L'inspecteur des titres !", "texte": f"Contravention : {nom} perd la moitié de ses kWh (−{perte} kWh).",
+        ev.append({"code": "inspecteur", "equipe": eq["id"], "titre": "L'inspecteur des titres !", "texte": f"Contravention : {nom} perd la moitié de ses kWh (−{perte} kWh).",
                    "ton": "mauvais"})
     elif case == "E":
         # « grand » : l'interface l'annonce en plein écran et attend « Continuer »
@@ -250,7 +250,7 @@ def _atterrir(etat: dict, eq: dict, anim: dict):
             "type": "fantome", "equipe": eq["id"], "prix_billet": prix,
             "peut_voler_billet": eq["kwh"] >= prix and any(e["billets"] > 0 for e in autres),
         }
-        ev.append({"titre": "Le fantôme du garage", "texte": f"{nom} réveille le fantôme… À qui va-t-il rendre visite ?",
+        ev.append({"code": "fantome", "equipe": eq["id"], "titre": "Le fantôme du garage", "texte": f"{nom} réveille le fantôme… À qui va-t-il rendre visite ?",
                    "ton": "neutre"})
         return
     _noter(etat, f"{nom} arrive sur la case {NOMS_CASES[case]}.")
@@ -310,7 +310,7 @@ def _detour(etat: dict) -> dict:
         a["position"], b["position"] = b["position"], a["position"]
         texte = f"{a['nom']} et {b['nom']} échangent leurs places sur le réseau !"
     _noter(etat, f"Détour : {texte}")
-    return {"titre": "Détour !", "texte": texte, "ton": "neutre", "echange": [a["id"], b["id"], quoi]}
+    return {"code": "detour", "equipes": [a["id"], b["id"]], "titre": "Détour !", "texte": texte, "ton": "neutre", "echange": [a["id"], b["id"], quoi]}
 
 
 def decider(etat: dict, decision: dict) -> dict:
@@ -327,7 +327,7 @@ def decider(etat: dict, decision: dict) -> dict:
             _gagner(etat, eq, -att["prix"])
             eq["billets"] += 1
             _placer_billet(etat)
-            anim["evenements"].append({"titre": "Billet d'or !", "texte": f"{eq['nom']} achète un Billet d'or. Il se déplace ailleurs sur le réseau.",
+            anim["evenements"].append({"code": "billet_achete", "equipe": eq["id"], "titre": "Billet d'or !", "texte": f"{eq['nom']} achète un Billet d'or. Il se déplace ailleurs sur le réseau.",
                                        "ton": "bon", "billet": True})
             _noter(etat, f"{eq['nom']} achète un Billet d'or.")
         else:
@@ -345,7 +345,7 @@ def decider(etat: dict, decision: dict) -> dict:
                 raise ErreurJeu(f"Pas assez de kWh pour {o['nom']} ({o['prix']} kWh).")
             _gagner(etat, eq, -int(o["prix"]))
             eq["objets"].append({"id": o["id"], "utilise": False})
-            anim["evenements"].append({"titre": "Dépanneur", "texte": f"{eq['nom']} achète : {o['nom']}.", "ton": "bon"})
+            anim["evenements"].append({"code": "achat", "equipe": eq["id"], "objet": o["id"], "titre": "Dépanneur", "texte": f"{eq['nom']} achète : {o['nom']}.", "ton": "bon"})
             _noter(etat, f"{eq['nom']} achète {o['nom']} au dépanneur.")
         etat["attente"] = None
         _continuer(etat, eq, att["reste"], anim)
@@ -371,7 +371,7 @@ def decider(etat: dict, decision: dict) -> dict:
             _gagner(etat, cible, -montant)
             _gagner(etat, eq, montant)
             texte = f"Le fantôme vole {montant} kWh à {cible['nom']} pour {eq['nom']}."
-        anim["evenements"].append({"titre": "Le fantôme du garage", "texte": texte, "ton": "neutre"})
+        anim["evenements"].append({"code": "fantome_resultat", "equipe": eq["id"], "equipes": [eq["id"], cible["id"]], "titre": "Le fantôme du garage", "texte": texte, "ton": "neutre"})
         _noter(etat, texte)
         etat["attente"] = None
         _equipe_suivante(etat)
@@ -409,7 +409,7 @@ def tour_suivant(etat: dict) -> dict:
         bonus = int(etat["reglages"]["partie"]["bonus_dernier_tour"])
         _gagner(etat, dernier, bonus)
         texte = f"Dernier tour ! {dernier['nom']}, en queue de peloton, reçoit +{bonus} kWh pour une dernière chance."
-        anim["evenements"].append({"titre": "Dernier arrêt", "texte": texte, "ton": "bon"})
+        anim["evenements"].append({"code": "dernier_arret", "equipe": dernier["id"], "titre": "Dernier arrêt", "texte": texte, "ton": "bon"})
         _noter(etat, texte)
     return anim
 

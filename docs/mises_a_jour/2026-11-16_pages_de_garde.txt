@@ -1,0 +1,8 @@
+2026-11-16 — Une page de garde pour chaque événement
+
+- Tous les événements s'annoncent maintenant en plein écran et attendent « Continuer » : Terminus, Recharge,
+  Bouchon, Inspecteur, Fantôme (réveil et butin), Détour (avec les deux équipes), Billet d'or (acheté ou trop cher),
+  passage et achat au dépanneur, coup de pouce du dernier tour, en plus des cartes Événement.
+- Page de garde « Billet d'or » avant la question d'achat, comme pour le dépanneur (une fois par arrêt).
+- Dix nouvelles illustrations SVG. Chaque événement envoyé par le serveur porte un « code » (testé).
+- Le Billet d'or est bleu en mode normal et doré en mode Noël (jeton --billet).

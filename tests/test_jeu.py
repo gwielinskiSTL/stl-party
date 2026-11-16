@@ -221,3 +221,31 @@ def test_case_evenement_annoncee_en_grand(cfg, equipes):
 
 def test_objets_ont_une_explication(cfg):
     assert all(o.get("explication") for o in cfg["objets"])
+
+
+@pytest.mark.parametrize("graine", range(10))
+def test_chaque_evenement_a_un_code(cfg, equipes, graine):
+    """Chaque événement envoyé à l'interface a un code : sa page de garde et son illustration en dépendent."""
+    jeu.hasard.seed(graine)
+    etat = jeu.nouvelle_partie(cfg, equipes)
+    h = random.Random(graine)
+    while etat["phase"] not in ("bonus", "terminee"):
+        if etat["phase"] == "mini_jeu":
+            anim = jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+        elif etat["phase"] == "fin_tour":
+            anim = jeu.tour_suivant(etat)
+        elif not etat["attente"]:
+            anim = jeu.lancer(etat)
+        else:
+            att = etat["attente"]
+            if att["type"] == "billet":
+                anim = jeu.decider(etat, {"acheter": True})
+            elif att["type"] == "boutique":
+                q = etat["equipes"][att["equipe"]]
+                ok = [o["id"] for o in etat["reglages"]["objets"] if o["prix"] <= q["kwh"]]
+                anim = jeu.decider(etat, {"objet": ok[0] if ok else None})
+            else:
+                autres = [e["id"] for e in etat["equipes"] if e["id"] != att["equipe"]]
+                anim = jeu.decider(etat, {"cible": h.choice(autres), "quoi": "kwh"})
+        for ev in anim.get("evenements", []):
+            assert ev.get("code"), ev

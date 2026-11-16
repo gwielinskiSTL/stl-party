@@ -12,6 +12,7 @@
   /* Mode Noël seulement (body.noel) : couleurs des fêtes conjuguées au marine STL.
      Le rouge des alertes (--rouge) reste distinct du rouge canneberge décoratif. */
   --noel-rouge: #a4161a; --noel-rouge-survol: #85120f; --noel-or: #d4a017; --noel-or-pale: #f6e7b8;
+  --billet: var(--cyan-doux);   /* le Billet d'or : doré seulement en mode Noël */
   --noel-sapin: #1f6f43; --noel-sapin-survol: #175636; --noel-creme: #faf6ee;
   --texte: var(--marine);
   --police: "Sofia Pro", Arial, sans-serif;
@@ -315,6 +316,7 @@ p { margin: 0; }
 .geant-description { font-size: clamp(20px, 2.4vw, 40px); line-height: 1.25; max-width: 30ch; }
 .ecran-geant .pion { border-color: var(--blanc); }
 .ecran-geant.garde-depanneur h2 { text-transform: uppercase; letter-spacing: -0.01em; }
+.geant-equipe { flex-wrap: wrap; }
 .geant-equipe { display: flex; align-items: center; gap: 14px; font-size: clamp(15px, 1.4vw, 22px); opacity: .85; }
 .geant-continuer {
   background: var(--blanc); color: var(--marine); border: none; font-size: clamp(20px, 2vw, 30px); font-weight: 700;
@@ -380,7 +382,7 @@ body.noel .ecran-geant { border-top-color: var(--noel-rouge); background-image: 
 .seulement-noel { display: none; }
 body.noel .seulement-noel { display: inline; }
 body.noel div.seulement-noel { display: block; }
-body.noel { background: var(--noel-creme); }
+body.noel { background: var(--noel-creme); --billet: var(--noel-or); }
 
 /* Guirlande lumineuse sous l'en-tête */
 .guirlande {

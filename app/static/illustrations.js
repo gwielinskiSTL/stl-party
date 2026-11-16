@@ -113,6 +113,86 @@ const ILLUSTRATIONS = (() => {
       "Tempête de neige"),
   };
 
+  // ------------------------------------------------------------------ cases du plateau
+  const fantomeForme = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})">
+      <path d="M-34 34 V-6 a34 34 0 0 1 68 0 V34 l-11.3 -10 -11.3 10 -11.4 -10 -11.3 10 -11.4 -10 z"
+        style="fill:var(--blanc);stroke:var(--marine);stroke-width:4;stroke-linejoin:round"></path>
+      <ellipse cx="-12" cy="-8" rx="6" ry="9" ${plein("marine")}></ellipse><ellipse cx="12" cy="-8" rx="6" ry="9" ${plein("marine")}></ellipse>
+      <ellipse cx="0" cy="12" rx="7" ry="5" ${plein("marine")}></ellipse></g>`;
+
+  const ticket = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})">
+      <path d="M-62 -36 H62 V-12 a12 12 0 0 0 0 24 V36 H-62 V12 a12 12 0 0 0 0 -24 Z"
+        style="fill:var(--billet);stroke:var(--marine);stroke-width:4;stroke-linejoin:round"></path>
+      <path d="M-30 -36 V36" ${trait("marine", 3, "stroke-dasharray:6 6")}></path>
+      ${etoile(-40, 0, 10, "blanc")}
+      <text x="16" y="-4" text-anchor="middle" style="fill:var(--marine);font:700 15px Arial, sans-serif">BILLET</text>
+      <text x="16" y="15" text-anchor="middle" style="fill:var(--marine);font:700 15px Arial, sans-serif">D'OR</text></g>`;
+
+  const CASES = {
+    terminus: () => svg(`${fond("bleu-pale")}
+      <path d="M22 82 L100 34 L178 82 Z" ${plein("marine")}></path>
+      <rect x="34" y="80" width="132" height="94" ${plein("marine")}></rect>
+      <rect x="52" y="98" width="96" height="76" ${plein("bleu-pale")}></rect>
+      ${bus(58, 124, 0.68)}
+      <circle cx="100" cy="62" r="13" ${plein("blanc")}></circle>
+      <text x="100" y="68" text-anchor="middle" style="fill:var(--marine);font:700 17px Arial, sans-serif">T</text>
+      ${eclair(170, 120, 0.55)}`, "Garage du Terminus"),
+
+    recharge: () => svg(`${fond("bleu-pale")}${route}${bus(8, 90, 0.8)}
+      <rect x="138" y="54" width="42" height="104" rx="6" ${plein("marine")}></rect>
+      <rect x="146" y="64" width="26" height="24" rx="3" ${plein("bleu-pale")}></rect>
+      ${eclair(159, 76, 0.32)}
+      <path d="M138 120 C 118 120, 112 70, 80 82" ${trait("marine", 6)}></path>
+      ${etincelles([[30, 52, 8], [104, 46, 7]], "vert")}`, "Autobus branché à une borne"),
+
+    bouchon: () => svg(`${fond("gris-pale")}${route}
+      ${[["cyan", 112], ["marine-doux", 150]].map(([c, x]) => `<g><rect x="${x}" y="114" width="36" height="24" rx="8" ${plein(c)}></rect>
+        <rect x="${x + 6}" y="104" width="22" height="14" rx="5" ${plein(c)}></rect>
+        <circle cx="${x + 9}" cy="140" r="6" ${plein("marine")}></circle><circle cx="${x + 27}" cy="140" r="6" ${plein("marine")}></circle></g>`).join("")}
+      ${bus(8, 92, 0.8)}
+      <path d="M112 48 h66 a8 8 0 0 1 8 8 v20 a8 8 0 0 1 -8 8 h-50 l-12 12 v-12 h-4 a8 8 0 0 1 -8 -8 v-20 a8 8 0 0 1 8 -8z" style="fill:var(--blanc);stroke:var(--marine);stroke-width:3;stroke-linejoin:round"></path>
+      ${[128, 146, 164].map((x) => `<circle cx="${x}" cy="66" r="5" ${plein("marine")}></circle>`).join("")}`, "Autobus coincé dans un bouchon"),
+
+    inspecteur: () => svg(`${fond("bleu-pale")}
+      ${personne(78, 140, "marine")}
+      <rect x="52" y="86" width="52" height="12" rx="4" ${plein("marine")}></rect>
+      <path d="M58 88 a20 14 0 0 1 40 0z" ${plein("marine")}></path><circle cx="78" cy="84" r="4" ${plein("cyan")}></circle>
+      <g transform="rotate(-10 140 110)"><rect x="112" y="80" width="56" height="70" style="fill:var(--blanc);stroke:var(--marine);stroke-width:4"></rect>
+        <path d="M122 96h36M122 110h36M122 124h22" ${trait("gris", 4)}></path>
+        <path d="M150 128 l8 10 l12 -18" ${trait("marine", 4)}></path></g>
+      <circle cx="152" cy="52" r="22" ${plein("marine")}></circle>
+      <path d="M152 40v14M152 62v1" ${trait("blanc", 6)}></path>`, "Inspecteur qui remet une contravention"),
+
+    fantome: () => svg(`${fond("marine-doux")}
+      <path d="M36 172 V96 L100 60 L164 96 V172" style="fill:none;stroke:var(--marine);stroke-width:5;stroke-linejoin:round"></path>
+      ${fantomeForme(100, 106, 1.25)}
+      <path d="M40 66 q10 -14 22 -4 M150 50 q12 -12 22 0" ${trait("blanc", 4)}></path>`, "Fantôme du garage"),
+
+    fantome_resultat: () => svg(`${fond("marine-doux")}${fantomeForme(80, 100, 1.1)}
+      ${eclair(150, 92, 0.85)}
+      <path d="M46 160 q54 22 112 -10" ${trait("blanc", 5)}></path><path d="M146 142l12 8-8 12" ${trait("blanc", 5)}></path>`,
+      "Fantôme qui emporte un butin"),
+
+    detour: () => svg(`${fond("bleu-pale")}
+      <path d="M100 26 L164 90 L100 154 L36 90 Z" style="fill:var(--cyan);stroke:var(--marine);stroke-width:5;stroke-linejoin:round"></path>
+      <path d="M78 118 V96 a18 18 0 0 1 18 -18 h24" ${trait("marine", 9)}></path><path d="M112 64l14 14-14 14" ${trait("marine", 9)}></path>
+      <rect x="30" y="160" width="140" height="18" ${plein("blanc")}></rect>
+      ${[0, 1, 2, 3, 4].map((k) => `<path d="M${36 + k * 28} 178 l14 -18 h10 l-14 18z" ${plein("marine")}></path>`).join("")}
+      <path d="M40 178v12M160 178v12" ${trait("marine", 5)}></path>`, "Panneau de détour"),
+
+    billet: () => svg(`${fond("bleu-pale")}${ticket(100, 104, 1.2)}
+      ${etincelles([[34, 46, 8], [168, 52, 9], [40, 170, 6], [166, 164, 7]], "marine")}`, "Billet d'or"),
+
+    dernier_arret: () => svg(`${fond("bleu-pale")}${route}${bus(12, 92, 0.8)}
+      <path d="M150 170 V40" ${trait("marine", 5)}></path>
+      ${Array.from({ length: 12 }, (_, k) => `<rect x="${152 + (k % 4) * 10}" y="${42 + Math.floor(k / 4) * 10}" width="10" height="10" ${plein((k + Math.floor(k / 4)) % 2 ? "blanc" : "marine")}></rect>`).join("")}
+      <rect x="152" y="42" width="40" height="30" ${trait("marine", 2)}></rect>
+      ${etincelles([[40, 50, 8], [110, 40, 9]], "vert")}`, "Drapeau du dernier tour"),
+  };
+  CASES.billet_trop_cher = CASES.billet;
+  CASES.billet_achete = CASES.billet;
+  CASES.depanneur_passe = () => depanneur();
+
   // ------------------------------------------------------------------ objets du dépanneur
   const OBJETS = {
     bouclier: () => svg(`${fond("bleu-pale")}
@@ -164,7 +244,8 @@ const ILLUSTRATIONS = (() => {
   const generique = (titre) => svg(`${fond("bleu-pale")}${cadeau(100, 112, 96)}`, titre);
 
   return {
-    evenement: (code) => (EVENEMENTS[code] || (() => generique("Événement")))(),
+    evenement: (code) => (EVENEMENTS[code] || CASES[code] || (() => generique("Événement")))(),
+    billet: () => CASES.billet(),
     objet: (id) => (OBJETS[id] || (() => generique("Objet")))(),
     depanneur,
   };
