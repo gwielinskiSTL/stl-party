@@ -198,3 +198,26 @@ def test_parties_completes(cfg, equipes, graine):
     assert None not in rep and len(rep) == 25
     assert all(rep.count(e["id"]) == 5 for e in etat["equipes"])
     assert len(etat["bonus"]) == 3
+
+
+def test_case_evenement_annoncee_en_grand(cfg, equipes):
+    """Chaque carte Événement porte un code (illustration) et demande l'écran géant."""
+    codes = set()
+    for graine in range(60):
+        jeu.hasard.seed(graine)
+        etat = jeu.nouvelle_partie(cfg, equipes)
+        jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+        eq = etat["equipes"][0]
+        eq["position"] = 3
+        etat["plateau"][3] = "E"
+        anim = {"evenements": []}
+        jeu._atterrir(etat, eq, anim)
+        ev = anim["evenements"][0]
+        assert ev["grand"] is True and ev["equipe"] == 0
+        codes.add(ev["code"])
+    assert codes == {"voie_reservee", "freinage", "borne_panne", "correspondance_ratee", "express", "prime",
+                     "covoiturage", "tempete"}
+
+
+def test_objets_ont_une_explication(cfg):
+    assert all(o.get("explication") for o in cfg["objets"])

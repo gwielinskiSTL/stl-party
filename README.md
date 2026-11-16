@@ -26,7 +26,8 @@ Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est abs
 2. **Récompense** : 1re et 2e → 3 dés, les autres → 2 dés ; kWh de 10 à 0 selon le rang. Les équipes jouent dans
    l'ordre du mini-jeu.
 3. **Déplacements** : lancer des dés, le pion avance, la case s'applique. En passant sur le Billet d'or (20 kWh) ou
-   au Dépanneur, une fenêtre propose l'achat.
+   au Dépanneur, une fenêtre propose l'achat (le dépanneur s'ouvre en plein écran, objets illustrés et expliqués).
+   Une case Événement s'annonce en plein écran ; on appuie sur « Continuer » pour poursuivre.
 4. Après 6 tours : **étoiles bonus** (Grand voyageur, Pleine charge, Pas de chance), **classement final** (Billets,
    puis kWh), puis **choix des positions** à tour de rôle et **liste imprimable** avec les objets à utiliser.
 
@@ -44,7 +45,8 @@ stl-party/
 │   ├── main.py          ← FastAPI : /api/..., enregistrement, annulation ; erreurs toujours en JSON
 │   ├── jeu.py           ← toutes les règles (état = dictionnaire JSON)
 │   ├── config.py        ← lecture et validation de STL_PARTY.toml
-│   └── static/          ← index.html, app.js (affichage + animations), style.css (charte), aide.html
+│   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG),
+│                          style.css (charte), aide.html, images/ (images d'objets facultatives)
 ├── tests/               ← pytest : règles, 30 parties complètes au hasard, API
 ├── docs/                ← charte graphique, notes de mise à jour datées
 └── PARTIES/             ← partie en cours, historique d'annulation, archives (jamais dans git)

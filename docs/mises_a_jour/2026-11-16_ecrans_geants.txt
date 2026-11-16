@@ -1,0 +1,10 @@
+2026-11-16 — Écran géant des Événements et dépanneur illustré
+
+- Case Événement : l'événement s'affiche en plein écran (grande illustration, titre géant, effet, équipe) et
+  attend « Continuer » (ou Entrée) avant de passer à la suite. Les autres cases gardent la carte au centre du plateau.
+- Dépanneur en plein écran : une carte par objet avec illustration, prix, règle et exemple concret d'utilisation ;
+  on choisit l'objet puis on confirme l'achat. Les objets trop chers sont grisés avec le nombre de kWh manquants.
+- Illustrations originales dessinées en SVG aux couleurs de la charte (app/static/illustrations.js), aussi affichées
+  en vignette à la création de la partie et dans la liste des objets de fin de partie.
+- STL_PARTY.toml : nouveau champ « explication » par objet ; champ « image » facultatif pour remplacer une
+  illustration par un fichier déposé dans app/static/images/.

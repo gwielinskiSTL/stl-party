@@ -119,12 +119,25 @@
     </form>
   </dialog>
 
-  <dialog class="dialogue" id="dlg-boutique">
+  <dialog class="dialogue plein-ecran" id="dlg-boutique">
     <form method="dialog">
-      <h2 id="boutique-titre">Dépanneur</h2>
-      <p class="note" id="boutique-texte"></p>
-      <div class="choix-objets" id="boutique-objets"></div>
-      <div class="actions"><button class="btn btn-secondaire" value="rien">Ne rien acheter</button></div>
+      <div class="boutique-tete">
+        <div>
+          <p class="surtitre">Dépanneur</p>
+          <h2 id="boutique-titre"></h2>
+        </div>
+        <dl class="boutique-solde">
+          <div><dt>kWh disponibles</dt><dd id="boutique-kwh"></dd></div>
+          <div><dt>Objets</dt><dd id="boutique-nb"></dd></div>
+        </dl>
+      </div>
+      <p class="boutique-intro">Les objets ne servent pas sur le plateau : ils s'utilisent <strong>pendant l'échange de cadeaux</strong>.
+        Choisissez-en un, puis confirmez.</p>
+      <div class="boutique-grille" id="boutique-objets" role="radiogroup" aria-label="Objets à acheter"></div>
+      <div class="boutique-pied">
+        <button class="btn btn-secondaire btn-geant" value="rien">Ne rien acheter</button>
+        <button class="btn btn-principal btn-geant" value="acheter" id="boutique-acheter" disabled>Choisissez un objet</button>
+      </div>
     </form>
   </dialog>
 
@@ -179,6 +192,20 @@
     </form>
   </dialog>
 
+  <div class="ecran-geant" id="ecran-geant" role="dialog" aria-modal="true" aria-labelledby="geant-titre" hidden>
+    <div class="ecran-geant-int">
+      <div class="geant-illustration" id="geant-illustration"></div>
+      <div class="geant-texte">
+        <p class="surtitre" id="geant-surtitre">Case Événement</p>
+        <h2 id="geant-titre"></h2>
+        <p class="geant-description" id="geant-description"></p>
+        <p class="geant-equipe" id="geant-equipe"></p>
+        <button class="btn geant-continuer" id="geant-continuer">Continuer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/illustrations.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

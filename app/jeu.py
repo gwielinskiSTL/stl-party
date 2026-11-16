@@ -239,7 +239,8 @@ def _atterrir(etat: dict, eq: dict, anim: dict):
         ev.append({"titre": "L'inspecteur des titres !", "texte": f"Contravention : {nom} perd la moitié de ses kWh (−{perte} kWh).",
                    "ton": "mauvais"})
     elif case == "E":
-        ev.append(_evenement(etat, eq))
+        # « grand » : l'interface l'annonce en plein écran et attend « Continuer »
+        ev.append({**_evenement(etat, eq), "grand": True, "equipe": eq["id"]})
     elif case == "D":
         ev.append(_detour(etat))
     elif case == "F":
@@ -262,37 +263,38 @@ def _evenement(etat: dict, eq: dict) -> dict:
     tirage = hasard.randrange(8)
     if tirage == 0:
         g = _gagner(etat, eq, 5)
-        return {"titre": "Voie réservée", "texte": f"{nom} file dans la voie réservée : +{g} kWh.", "ton": "bon"}
+        return {"code": "voie_reservee", "titre": "Voie réservée", "texte": f"{nom} file dans la voie réservée : +{g} kWh.", "ton": "bon"}
     if tirage == 1:
         nb = int(etat["des"].get(str(eq["id"]), 1))
         g = _gagner(etat, eq, 2 * nb)
-        return {"titre": "Freinage régénératif", "texte": f"{nom} récupère 2 kWh par dé lancé : +{g} kWh.", "ton": "bon"}
+        return {"code": "freinage", "titre": "Freinage régénératif", "texte": f"{nom} récupère 2 kWh par dé lancé : +{g} kWh.", "ton": "bon"}
     if tirage == 2:
         p = -_gagner(etat, eq, -5)
         eq["stats"]["malchances"] += 1
-        return {"titre": "Borne en panne", "texte": f"La borne refuse de charger : {nom} perd {p} kWh.", "ton": "mauvais"}
+        return {"code": "borne_panne", "titre": "Borne en panne", "texte": f"La borne refuse de charger : {nom} perd {p} kWh.", "ton": "mauvais"}
     if tirage == 3:
         eq["position"] = (eq["position"] - 3) % n
         eq["stats"]["malchances"] += 1
-        return {"titre": "Correspondance ratée", "texte": f"{nom} recule de 3 arrêts.", "ton": "mauvais", "saut": eq["position"]}
+        return {"code": "correspondance_ratee", "titre": "Correspondance ratée", "texte": f"{nom} recule de 3 arrêts.", "ton": "mauvais", "saut": eq["position"]}
     if tirage == 4:
         eq["position"] = (eq["position"] + 3) % n
         eq["stats"]["cases"] += 3
-        return {"titre": "Service express", "texte": f"{nom} saute 3 arrêts.", "ton": "bon", "saut": eq["position"]}
+        return {"code": "express", "titre": "Service express", "texte": f"{nom} saute 3 arrêts.", "ton": "bon", "saut": eq["position"]}
     if tirage == 5:
         if len(eq["objets"]) < int(etat["reglages"]["partie"]["max_objets"]):
             o = hasard.choice(etat["reglages"]["objets"])
             eq["objets"].append({"id": o["id"], "utilise": False})
-            return {"titre": "Prime de ponctualité", "texte": f"{nom} reçoit un objet gratuit : {o['nom']} !", "ton": "bon"}
+            return {"code": "prime", "titre": "Prime de ponctualité", "texte": f"{nom} reçoit un objet gratuit : {o['nom']} !", "ton": "bon",
+                    "objet": o["id"]}
         g = _gagner(etat, eq, 5)
-        return {"titre": "Prime de ponctualité", "texte": f"Sac plein ! {nom} reçoit +{g} kWh à la place.", "ton": "bon"}
+        return {"code": "prime", "titre": "Prime de ponctualité", "texte": f"Sac plein ! {nom} reçoit +{g} kWh à la place.", "ton": "bon"}
     if tirage == 6:
         for e in etat["equipes"]:
             _gagner(etat, e, 2)
-        return {"titre": "Covoiturage", "texte": "Tout le monde partage la route : +2 kWh pour chaque équipe.", "ton": "bon"}
+        return {"code": "covoiturage", "titre": "Covoiturage", "texte": "Tout le monde partage la route : +2 kWh pour chaque équipe.", "ton": "bon"}
     for e in etat["equipes"]:
         _gagner(etat, e, -2)
-    return {"titre": "Tempête de neige", "texte": "Le chauffage tourne à fond : −2 kWh pour chaque équipe.", "ton": "mauvais"}
+    return {"code": "tempete", "titre": "Tempête de neige", "texte": "Le chauffage tourne à fond : −2 kWh pour chaque équipe.", "ton": "mauvais"}
 
 
 def _detour(etat: dict) -> dict:

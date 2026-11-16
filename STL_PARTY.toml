@@ -61,32 +61,39 @@ description = "Toute l'équipe construit la plus haute tour de gobelets en 60 se
 toute_equipe = true
 
 # ------------------------------------------------------------------ objets (utilisables pendant l'échange)
+# description : la règle en une phrase · explication : un exemple concret, affiché au dépanneur
+# image (facultatif) : fichier dans app/static/images/ pour remplacer l'illustration dessinée
 [[objets]]
 id = "bouclier"
 nom = "Bouclier"
 prix = 15
 description = "Votre cadeau ne peut pas être volé pendant les 3 prochains tours de l'échange."
+explication = "Exemple : vous venez de déballer le cadeau de vos rêves. Montrez le Bouclier : pendant les 3 prochains tours, personne ne peut vous le prendre."
 
 [[objets]]
 id = "vol_express"
 nom = "Vol express"
 prix = 12
 description = "Volez un cadeau même s'il est gelé (déjà volé le nombre maximal de fois)."
+explication = "Exemple : la tasse chauffante a déjà été volée le nombre maximal de fois et ne peut plus bouger. Avec le Vol express, vous la prenez quand même."
 
 [[objets]]
 id = "correspondance"
 nom = "Correspondance"
 prix = 10
 description = "Échangez votre cadeau contre celui de n'importe qui, sans négociation."
+explication = "Exemple : à votre tour, au lieu d'ouvrir ou de voler, échangez votre cadeau contre celui d'un collègue. Il n'a pas son mot à dire."
 
 [[objets]]
 id = "retard"
 nom = "Retard"
 prix = 8
 description = "Passez votre tour : vous choisirez en tout dernier."
+explication = "Exemple : vous deviez choisir en 3e ? Utilisez le Retard à votre tour : vous passerez en tout dernier, quand il y aura le plus de cadeaux à voler."
 
 [[objets]]
 id = "gel"
 nom = "Gel"
 prix = 8
 description = "Un joueur de votre choix ne peut pas voler à son prochain tour."
+explication = "Exemple : un collègue lorgne votre cadeau ? Gelez-le : à son prochain tour, il devra ouvrir un nouveau cadeau au lieu de voler."

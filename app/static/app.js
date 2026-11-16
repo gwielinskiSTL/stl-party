@@ -30,6 +30,9 @@ const echapper = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<
 const etat = () => partie && partie.etat;
 const equipe = (id) => etat().equipes[Number(id)];
 const pion = (id, classe = "pion") => `<span class="${classe} eq-${id % 8}" aria-hidden="true">${Number(id) + 1}</span>`;
+const imageObjet = (o) => o.image
+  ? `<img src="/static/images/${encodeURI(o.image)}" alt="${echapper(o.nom)}">`
+  : ILLUSTRATIONS.objet(o.id);
 const objetCfg = (id) => etat().reglages.objets.find((o) => o.id === id) || { nom: id, description: "" };
 
 // ------------------------------------------------------------------------------ API
@@ -168,7 +171,8 @@ function afficherConfig() {
   $("#config-mini-jeux").innerHTML = cfg.mini_jeux.map((m) =>
     `<li><strong>${echapper(m.nom)}</strong>${m.toute_equipe ? " · toute l'équipe" : ""}<br><span class="note">${echapper(m.description)}</span></li>`).join("");
   $("#config-objets").innerHTML = cfg.objets.map((o) =>
-    `<li><strong>${echapper(o.nom)}</strong> · ${fr(o.prix)} kWh<br><span class="note">${echapper(o.description)}</span></li>`).join("");
+    `<li class="objet-liste"><span class="objet-vignette">${imageObjet(o)}</span>
+      <span><strong>${echapper(o.nom)}</strong> · ${fr(o.prix)} kWh<br><span class="note">${echapper(o.description)}</span></span></li>`).join("");
   resumeConfig();
 }
 
@@ -317,6 +321,27 @@ function montrerCarte(ev) {
   });
 }
 
+/** Plein écran pour une case Événement : grande illustration, attend « Continuer » (ou Entrée). */
+function montrerGrandEcran(ev) {
+  return new Promise((resoudre) => {
+    const ecran = $("#ecran-geant");
+    ecran.className = `ecran-geant ${ev.ton || ""}`;
+    $("#geant-illustration").innerHTML = ILLUSTRATIONS.evenement(ev.code);
+    $("#geant-titre").textContent = ev.titre;
+    $("#geant-description").textContent = ev.texte;
+    $("#geant-equipe").innerHTML = ev.equipe !== undefined
+      ? `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} tombe sur une case Événement</span>` : "";
+    if (ev.objet) {   // prime : on montre aussi l'objet gagné
+      const o = etat().reglages.objets.find((x) => x.id === ev.objet);
+      if (o) $("#geant-illustration").innerHTML = imageObjet(o);
+    }
+    ecran.hidden = false;
+    const bouton = $("#geant-continuer");
+    bouton.focus();
+    bouton.addEventListener("click", () => { ecran.hidden = true; resoudre(); }, { once: true });
+  });
+}
+
 // ------------------------------------------------------------------------------ animations
 async function rejouer(anim, nouvelle) {
   const ancienne = partie;
@@ -353,7 +378,7 @@ async function rejouer(anim, nouvelle) {
   }
   partie = nouvelle;
   for (const ev of anim.evenements || []) {
-    await montrerCarte(ev);
+    await (ev.grand ? montrerGrandEcran(ev) : montrerCarte(ev));
     if (ev.saut !== undefined || ev.echange || ev.billet) {   // téléportations : on synchronise
       synchroniserPositions();
       dessinerPlateau();
@@ -459,14 +484,37 @@ async function ouvrirDecision() {
       const choix = await ouvrirDialogue("#dlg-billet");
       if (choix) decision = { acheter: choix === "oui" };
     } else if (att.type === "boutique") {
-      $("#boutique-titre").innerHTML = `${pion(q.id)} Dépanneur`;
       const max = etat().reglages.partie.max_objets;
-      $("#boutique-texte").textContent = `${q.nom} a ${fr(q.kwh)} kWh et ${q.objets.length} objet(s) sur ${max}. Les objets servent pendant l'échange.`;
-      $("#boutique-objets").innerHTML = etat().reglages.objets.map((o) =>
-        `<button class="choix-objet" value="${o.id}" ${q.kwh < o.prix ? "disabled" : ""}>
-          <strong>${echapper(o.nom)}</strong><span class="prix">${fr(o.prix)} kWh</span><small>${echapper(o.description)}</small></button>`).join("");
+      $("#boutique-titre").innerHTML = `${pion(q.id, "pion pion-grand")} ${echapper(q.nom)}`;
+      $("#boutique-kwh").textContent = fr(q.kwh);
+      $("#boutique-nb").textContent = `${q.objets.length} sur ${max}`;
+      let choisi = null;
+      const acheter = $("#boutique-acheter");
+      const majChoix = () => {
+        document.querySelectorAll("#boutique-objets .objet-carte").forEach((c) => c.setAttribute("aria-checked", String(c.dataset.id === choisi)));
+        const o = etat().reglages.objets.find((x) => x.id === choisi);
+        acheter.disabled = !o;
+        acheter.value = choisi || "";
+        acheter.textContent = o ? `Acheter ${o.nom} · ${fr(o.prix)} kWh` : "Choisissez un objet";
+      };
+      $("#boutique-objets").innerHTML = etat().reglages.objets.map((o) => {
+        const manque = o.prix - q.kwh;
+        const possede = q.objets.filter((x) => x.id === o.id).length;
+        return `<button type="button" class="objet-carte" role="radio" aria-checked="false" data-id="${o.id}" ${manque > 0 ? "disabled" : ""}>
+          <span class="objet-image">${imageObjet(o)}</span>
+          <span class="objet-entete"><strong>${echapper(o.nom)}</strong><span class="prix">${fr(o.prix)} kWh</span></span>
+          <span class="objet-description">${echapper(o.description)}</span>
+          ${o.explication ? `<span class="objet-exemple">${echapper(o.explication)}</span>` : ""}
+          <span class="objet-etat">${manque > 0 ? `Il manque ${fr(manque)} kWh` : possede ? `Déjà ${possede} dans le sac` : "Disponible"}</span>
+        </button>`;
+      }).join("");
+      document.querySelectorAll("#boutique-objets .objet-carte").forEach((c) => c.addEventListener("click", () => {
+        choisi = c.dataset.id; majChoix();
+      }));
+      majChoix();
       const choix = await ouvrirDialogue("#dlg-boutique");
-      if (choix) decision = { objet: choix === "rien" ? null : choix };
+      if (choix === "rien") decision = { objet: null };
+      else if (choix && choix !== "") decision = { objet: choix };
     } else if (att.type === "fantome") {
       let quoi = "kwh";
       let cible = null;
@@ -599,6 +647,7 @@ function afficherFin() {
           <h3>${pion(q.id)} ${echapper(q.nom)}</h3>
           ${q.objets.length ? q.objets.map((o, k) => `<label class="objet-ligne${o.utilise ? " utilise" : ""}">
             <input type="checkbox" data-equipe="${q.id}" data-indice="${k}" ${o.utilise ? "checked" : ""}>
+            <span class="objet-vignette">${imageObjet(objetCfg(o.id))}</span>
             <span><strong>${echapper(objetCfg(o.id).nom)}</strong><small>${echapper(objetCfg(o.id).description)}</small></span></label>`).join("")
             : `<p class="note">Aucun objet.</p>`}</div>`).join("")}</div>
       </div>`;

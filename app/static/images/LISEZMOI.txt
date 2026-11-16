@@ -1,0 +1,1 @@
+Images facultatives des objets (champ « image » dans STL_PARTY.toml). Format carré conseillé (PNG ou SVG).
