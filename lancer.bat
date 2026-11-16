@@ -11,7 +11,7 @@ call conda activate stl-party
 
 REM --- Hote et port sont lus dans STL_PARTY.toml (section application)
 echo Demarrage de STL Party sur http://127.0.0.1:3510 ...
-start "" http://127.0.0.1:3510
+start "" http://localhost:3510
 python -m app.main
 
 popd

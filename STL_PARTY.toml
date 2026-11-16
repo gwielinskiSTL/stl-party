@@ -5,7 +5,7 @@
 # =====================================================================================
 
 [application]
-hote = "127.0.0.1"      # "0.0.0.0" pour y accéder depuis un autre poste du réseau
+hote = "0.0.0.0"      # "0.0.0.0" pour y accéder depuis un autre poste du réseau
 port = 3510
 mode_noel = false       # true : le jeu s'ouvre en mode Noël (le bouton de l'en-tête reste prioritaire)
 animations = "toujours" # "systeme" : réduire les animations si le poste le demande (réglage d'accessibilité de Windows)
