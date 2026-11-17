@@ -111,7 +111,7 @@ function creerNeige() {
 
 $("#btn-son").setAttribute("aria-pressed", String(SONS.actif));
 $("#btn-son").addEventListener("click", () => $("#btn-son").setAttribute("aria-pressed", String(SONS.basculer())));
-$("#btn-noel").addEventListener("click", () => appliquerNoel(!document.body.classList.contains("noel"), true));
+$("#btn-noel").addEventListener("click", () => { appliquerNoel(!document.body.classList.contains("noel"), true); synchroniserSuivi(); });
 appliquerNoel(noelMemorise() ?? false, false);   // tout de suite, pour éviter un éclair aux couleurs normales
 
 // ------------------------------------------------------------------------------ démarrage
@@ -142,6 +142,7 @@ function afficher() {
   $("#btn-nouvelle").hidden = !e;
   $("#btn-journal").hidden = !e;
   $("#btn-annuler").hidden = !e;
+  synchroniserSuivi();
   if (!e) { afficherConfig(); majBoutons(); return; }
   $("#meta-tour").textContent = `${Math.min(e.tour, e.nb_tours)} / ${e.nb_tours}`;
   $("#meta-phase").textContent = PHASES[e.phase] || e.phase;
@@ -156,6 +157,35 @@ function afficher() {
   }
   majBoutons();
 }
+
+// ---- suivi sur cellulaire : l'écran projeté publie ce qu'il vient de finir d'afficher
+let synchroAttente = null;
+function synchroniserSuivi() {
+  if (occupe) return;                    // jamais pendant une animation : les cellulaires suivent la salle
+  clearTimeout(synchroAttente);
+  synchroAttente = setTimeout(() => {
+    fetch("/api/suivi/synchroniser", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ noel: document.body.classList.contains("noel") }) }).catch(() => {});
+  }, 400);
+}
+
+$("#btn-suivi").addEventListener("click", async () => {
+  $("#suivi-qr").innerHTML = "";
+  $("#suivi-url").textContent = "";
+  $("#suivi-avertissement").hidden = true;
+  $("#dlg-suivi").showModal();
+  try {
+    const a = await api("GET", "/api/suivi/adresse");
+    if (a.qr) $("#suivi-qr").innerHTML = `<img src="/api/suivi/qr.svg?t=${Date.now()}" alt="Code QR de la page de suivi">`;
+    $("#suivi-url").textContent = a.url || "Adresse réseau introuvable";
+    const avert = [];
+    if (!a.accessible) avert.push("Le jeu n'écoute que ce poste : mettez hote = \"0.0.0.0\" dans STL_PARTY.toml puis redémarrez.");
+    if (!a.qr && a.url) avert.push("Code QR indisponible (installer le paquet segno) : partagez l'adresse ci-dessus.");
+    avert.push("Les cellulaires doivent être sur le même réseau Wi-Fi que ce poste ; le pare-feu Windows doit autoriser le port.");
+    $("#suivi-avertissement").textContent = avert.join(" ");
+    $("#suivi-avertissement").hidden = false;
+  } catch (e) { $("#suivi-url").textContent = e.message; }
+});
 
 function majBoutons() {
   $("#btn-annuler").disabled = occupe || !(partie && partie.peut_annuler);

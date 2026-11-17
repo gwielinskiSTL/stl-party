@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STL Party</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%23151f6d%27/%3E%3Ccircle cx=%278%27 cy=%278%27 r=%273.5%27 fill=%27%2300a9e0%27/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-17a">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17b">
 </head>
 <body>
   <header class="entete-stl">
@@ -38,6 +38,10 @@
           <button class="btn-entete" id="btn-journal" title="Tout ce qui s'est passé depuis le début" hidden>
             <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 2.5h8M3 5.5h8M3 8.5h8M3 11.5h5"/></svg>
             Journal
+          </button>
+          <button class="btn-entete" id="btn-suivi" title="Code QR pour suivre la partie sur cellulaire">
+            <svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3.5" y="1.5" width="7" height="11" rx="1.2"/><path d="M6 10.5h2"/></svg>
+            Suivi cellulaire
           </button>
           <a class="btn-entete" href="/static/aide.html" target="_blank" rel="noopener" title="Règles du jeu et guide de l'animateur (nouvel onglet)">
             <svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M5.4 5.4a1.7 1.7 0 1 1 2.3 1.6c-.5.2-.7.6-.7 1.1M7 10.2v.1"/></svg>
@@ -205,6 +209,18 @@
     </form>
   </dialog>
 
+  <dialog class="dialogue dialogue-suivi" id="dlg-suivi">
+    <form method="dialog">
+      <h2>Suivez la partie sur votre cellulaire</h2>
+      <p class="note">Points des équipes, inventaire des objets et ordre de la pige quand l'animateur le publie.
+        Lecture seule : rien ne se joue depuis le cellulaire.</p>
+      <div class="suivi-qr" id="suivi-qr"></div>
+      <p class="suivi-url" id="suivi-url"></p>
+      <p class="info" id="suivi-avertissement" hidden></p>
+      <div class="actions"><button class="btn btn-principal" value="fermer">Fermer</button></div>
+    </form>
+  </dialog>
+
   <dialog class="dialogue" id="dlg-confirmer">
     <form method="dialog">
       <h2 id="confirmer-titre"></h2>
@@ -232,8 +248,8 @@
   <div class="revelation" id="revelation" role="dialog" aria-modal="true" aria-live="polite" hidden></div>
   <div class="confettis" id="confettis" aria-hidden="true"></div>
 
-  <script src="/static/sons.js?v=2026-11-17a"></script>
-  <script src="/static/illustrations.js?v=2026-11-17a"></script>
-  <script src="/static/app.js?v=2026-11-17a"></script>
+  <script src="/static/sons.js?v=2026-11-17b"></script>
+  <script src="/static/illustrations.js?v=2026-11-17b"></script>
+  <script src="/static/app.js?v=2026-11-17b"></script>
 </body>
 </html>

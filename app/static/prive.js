@@ -88,6 +88,29 @@ function afficher() {
   }));
 }
 
+function majPublication() {
+  const publiee = !!donnees.pige.publiee;
+  $("#publication-titre").textContent = publiee ? "Ordre publié sur les cellulaires" : "Ordre non publié sur les cellulaires";
+  $("#publication-texte").textContent = publiee
+    ? "Les participants voient l'ordre de pige sur la page de suivi. Les objets attribués restent privés."
+    : "Les participants voient « La pige est faite », sans l'ordre. Les objets attribués restent toujours privés.";
+  $("#btn-publier").textContent = publiee ? "Retirer l'ordre des cellulaires" : "Publier l'ordre sur les cellulaires";
+  $("#btn-publier").className = publiee ? "btn btn-secondaire" : "btn btn-principal";
+  document.querySelector(".publication").classList.toggle("publiee", publiee);
+}
+
+$("#btn-publier").addEventListener("click", async () => {
+  alerte("");
+  try {
+    const r = await fetch("/api/pige/publication", { method: "POST",
+      headers: { "Content-Type": "application/json", ...(code ? { "X-Code-Prive": code } : {}) },
+      body: JSON.stringify({ publiee: !donnees.pige.publiee }) });
+    if (!r.ok) throw new Error((await r.json()).erreur);
+    await charger();
+    majPublication();
+  } catch (e) { alerte(e.message); }
+});
+
 function montrer(visible) {
   $("#contenu").hidden = !visible;
   $("#garde").hidden = visible;
@@ -101,6 +124,7 @@ async function ouvrir() {
     $("#form-code").hidden = true;
     $("#btn-csv").href = `/api/pige.csv${code ? `?code=${encodeURIComponent(code)}` : ""}`;
     afficher();
+    majPublication();
     montrer(true);
   } catch (e) { alerte(e.message); }
 }

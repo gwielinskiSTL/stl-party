@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Classement privé — STL Party</title>
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-17a">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17b">
 </head>
 <body>
   <script>try { if (localStorage.getItem("stl-party.mode-noel") === "1") document.body.classList.add("noel"); } catch (_) {}</script>
@@ -41,6 +41,14 @@
     </section>
 
     <div id="contenu" hidden>
+      <section class="bloc publication pas-imprimer">
+        <div>
+          <h2 id="publication-titre">Ordre non publié sur les cellulaires</h2>
+          <p class="note" id="publication-texte">Les participants voient « La pige est faite », sans l'ordre. Les objets
+            attribués restent toujours privés.</p>
+        </div>
+        <button class="btn btn-principal" id="btn-publier">Publier l'ordre sur les cellulaires</button>
+      </section>
       <section class="bloc">
         <div class="bloc-tete"><h2>Ordre de la pige</h2><span class="note" id="resume"></span></div>
         <div class="champ recherche pas-imprimer"><input type="search" id="recherche" placeholder="Chercher un participant ou une équipe" aria-label="Chercher"></div>
@@ -66,7 +74,7 @@
     </div>
   </div>
 
-  <script src="/static/illustrations.js?v=2026-11-17a"></script>
-  <script src="/static/prive.js?v=2026-11-17a"></script>
+  <script src="/static/illustrations.js?v=2026-11-17b"></script>
+  <script src="/static/prive.js?v=2026-11-17b"></script>
 </body>
 </html>

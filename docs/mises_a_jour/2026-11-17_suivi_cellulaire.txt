@@ -1,0 +1,13 @@
+2026-11-17 — Suivi sur cellulaire (lecture seule)
+
+- Nouvelle page /suivre pour cellulaire : onglets Équipes (classement, Billets d'or, kWh, arrêt, nombre d'objets,
+  joueurs, derniers événements), Inventaire (objets de chaque équipe, utilisés barrés) et Pige. Mise à jour toutes
+  les 3 s, indicateur « En direct ». Aucune action de jeu possible.
+- Pas de divulgâcheur : les cellulaires montrent l'état que l'écran projeté a fini d'afficher (l'écran envoie un
+  instantané après chaque animation, /api/suivi/synchroniser). Pendant le dévoilement final, points et journal
+  sont cachés (« Regardez l'écran ! »).
+- Ordre de pige : affiché seulement après publication depuis la page privée (bouton « Publier l'ordre sur les
+  cellulaires », réversible). Les objets attribués aux joueurs ne sont jamais envoyés aux cellulaires.
+- Écran projeté : bouton « Suivi cellulaire » avec code QR et adresse réseau du poste. Code QR généré par le paquet
+  segno (ajouté à environment.yml ; sans lui, l'adresse s'affiche en texte).
+- Le mode Noël de l'écran projeté est repris sur les cellulaires.

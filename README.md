@@ -38,6 +38,11 @@ Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est abs
    (ou avec `code_prive`), avec export CSV, impression et estimation des chances par simulation.
 
 Les équipes peuvent être formées **au hasard** : coller la liste des participants à l'écran de départ.
+
+**Suivi sur cellulaire** : bouton « Suivi cellulaire » de l'en-tête → code QR vers `/suivre` (lecture seule :
+points par équipe, inventaire des objets, ordre de pige une fois publié depuis la page privée). Les cellulaires
+montrent ce que l'écran projeté a déjà affiché, jamais en avance. Conditions : `hote = "0.0.0.0"`, cellulaires sur
+le même Wi-Fi que le poste, port autorisé dans le pare-feu Windows.
    Les sons sont synthétisés par le navigateur ; le bouton **Son** de l'en-tête les coupe.
 
 Toutes les règles et valeurs sont dans [`STL_PARTY.toml`](STL_PARTY.toml) : nombre de tours, dés et kWh par rang,
@@ -56,6 +61,7 @@ stl-party/
 │   ├── config.py        ← lecture et validation de STL_PARTY.toml
 │   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG), sons.js,
 │                          prive.html + prive.js (classement privé de la pige),
+│                          suivre.html + suivre.js (suivi sur cellulaire),
 │                          style.css (charte), aide.html, images/ (images d'objets facultatives)
 ├── tests/               ← pytest : règles, 30 parties complètes au hasard, API
 ├── docs/                ← charte graphique, notes de mise à jour datées
@@ -83,6 +89,10 @@ stl-party/
 | `POST /api/equipes/aleatoires` | `{"personnes": [...], "nb_equipes": 5}` → équipes équilibrées au hasard |
 | `POST /api/pige` | tire la pige privée (après les bonus) ; la vue publique n'en montre que le résumé |
 | `GET /api/pige` · `GET /api/pige.csv` · `GET /prive` | **privé** : poste local seulement, ou code `code_prive` |
+| `POST /api/pige/publication` | **privé** : `{"publiee": true}` montre l'ordre (sans les objets) sur les cellulaires |
+| `GET /suivre` · `GET /api/suivi` | page et données de suivi pour cellulaire (lecture seule) |
+| `POST /api/suivi/synchroniser` | l'écran projeté publie ce qu'il vient d'afficher |
+| `GET /api/suivi/adresse` · `GET /api/suivi/qr.svg` | adresse réseau et code QR de la page de suivi |
 | `POST /api/ajuster` · `POST /api/objet` · `POST /api/annuler` | corrections, objet utilisé, retour arrière |
 
 ## Tests

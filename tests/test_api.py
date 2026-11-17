@@ -121,3 +121,60 @@ def test_page_privee_avec_code(equipes, tmp_path, monkeypatch):
     csv_ = client.get("/api/pige.csv", params={"code": "sapin"})
     assert csv_.status_code == 200 and "Ordre de pige" in csv_.text and "Gel" in csv_.text
     assert "sapin" not in client.get("/api/configuration").text
+
+
+# ------------------------------------------------------------------------------ suivi sur cellulaire
+def test_suivi_sans_partie():
+    assert client.get("/api/suivi").json()["partie"] is False
+
+
+def test_suivi_suit_l_ecran_projete(equipes):
+    client.post("/api/partie", json={"equipes": equipes})
+    client.post("/api/suivi/synchroniser", json={"noel": True})
+    client.post("/api/mini-jeu", json={"ordre": [4, 3, 2, 1, 0]})
+    v = client.get("/api/suivi").json()
+    assert v["phase"] == "mini_jeu" and v["noel"] is True       # l'écran n'a pas encore fini d'afficher le mini-jeu
+    client.post("/api/suivi/synchroniser", json={})
+    v = client.get("/api/suivi").json()
+    assert v["phase"] == "deplacement" and v["courant"] == "Équipe 5"
+    assert v["equipes"][0]["nom"] == "Équipe 5" and v["equipes"][0]["des"] == 3
+
+
+def test_suivi_cache_les_points_pendant_le_devoilement(equipes, tmp_path):
+    _jusqu_a_la_pige(equipes, tmp_path)          # passe par la phase bonus
+    import json
+    fichier = tmp_path / "PARTIES" / "partie.json"
+    etat = json.loads(fichier.read_text(encoding="utf-8"))
+    etat["phase"] = "bonus"
+    (tmp_path / "PARTIES" / "suivi.json").write_text(json.dumps({"etat": etat, "noel": False, "maj": None}), encoding="utf-8")
+    v = client.get("/api/suivi").json()
+    assert v["resultats_caches"] is True and v["journal"] == []
+    assert all(e["kwh"] is None and e["billets"] is None and e["rang"] is None for e in v["equipes"])
+
+
+def test_ordre_de_pige_seulement_si_publie(equipes, tmp_path, monkeypatch):
+    monkeypatch.setenv("PARTY_CODE_PRIVE", "sapin")
+    _jusqu_a_la_pige(equipes, tmp_path)
+    client.post("/api/suivi/synchroniser", json={})
+    v = client.get("/api/suivi").json()
+    assert v["pige"] == {"faite": True, "publiee": False}
+    assert client.post("/api/pige/publication", json={"publiee": True}).status_code == 403      # sans code
+    assert client.post("/api/pige/publication", json={"publiee": True}, headers={"X-Code-Prive": "sapin"}).status_code == 200
+    v = client.get("/api/suivi").json()
+    assert v["pige"]["publiee"] and len(v["pige"]["ordre"]) == 25
+    assert set(v["pige"]["ordre"][0]) == {"ordre", "joueur", "equipe"}                         # jamais les objets
+    assert "indice" not in json_texte(v)
+
+
+def json_texte(v):
+    import json
+    return json.dumps(v)
+
+
+def test_adresse_et_qr():
+    a = client.get("/api/suivi/adresse").json()
+    assert a["url"].endswith("/suivre")
+    if a["qr"]:
+        r = client.get("/api/suivi/qr.svg")
+        assert r.status_code == 200 and r.text.lstrip().startswith("<svg")
+    assert "Suivi" in client.get("/suivre").text

@@ -250,6 +250,93 @@ def page_privee():
     return FileResponse(STATIQUE / "prive.html")
 
 
+@app.post("/api/pige/publication")
+def publier_pige(request: Request, corps: dict = Body(...)):
+    """Depuis la page privée seulement : montre ou cache l'ordre de pige sur les cellulaires."""
+    _verifier_prive(request)
+    return _agir(jeu.publier_pige, bool(corps.get("publiee")))
+
+
+# ------------------------------------------------------------------------------ suivi sur cellulaire (lecture seule)
+@app.post("/api/suivi/synchroniser")
+def synchroniser_suivi(corps: dict = Body(default={})):
+    """Appelé par l'écran projeté quand il a fini d'afficher une action : les cellulaires suivent la salle,
+    sans jamais montrer un résultat avant l'écran."""
+    with _verrou:
+        etat = _charger()
+        _ecrire_json("suivi.json", {"etat": etat, "noel": bool(corps.get("noel")),
+                                    "maj": datetime.now().isoformat(timespec="seconds")})
+    return {"statut": "ok"}
+
+
+@app.get("/api/suivi")
+def suivi():
+    instantane = _lire_json("suivi.json", None)
+    actuel = _charger()
+    affiche = instantane["etat"] if instantane else actuel
+    if actuel is None:                      # partie abandonnée ou pas commencée
+        affiche = None
+    vue = jeu.vue_suivi(affiche, actuel)
+    vue["noel"] = bool(instantane and instantane.get("noel")) or bool(config.lire()["application"].get("mode_noel"))
+    vue["maj"] = instantane["maj"] if instantane else None
+    return vue
+
+
+def _adresse_reseau() -> str | None:
+    """Adresse IP du poste sur le réseau local (sans rien envoyer : la connexion UDP sert à choisir l'interface)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            ip = s.getsockname()[0]
+        if not ip.startswith("127."):
+            return ip
+    except OSError:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        return None if ip.startswith("127.") else ip
+    except OSError:
+        return None
+
+
+@app.get("/api/suivi/adresse")
+def adresse_suivi(request: Request):
+    reglages = config.application()
+    hote_demande = (request.url.hostname or "").lower()
+    if hote_demande and hote_demande not in LOCAL:
+        url = f"{request.url.scheme}://{request.url.netloc}/suivre"
+    else:
+        ip = _adresse_reseau()
+        url = f"http://{ip}:{reglages['port']}/suivre" if ip else None
+    accessible = reglages["hote"] in ("0.0.0.0", "::") or (hote_demande not in LOCAL)
+    return {"url": url, "accessible": accessible, "qr": url is not None and _segno() is not None}
+
+
+def _segno():
+    try:
+        import segno
+        return segno
+    except ImportError:
+        return None
+
+
+@app.get("/api/suivi/qr.svg")
+def qr_suivi(request: Request):
+    segno = _segno()
+    url = adresse_suivi(request)["url"]
+    if segno is None or url is None:
+        raise jeu.ErreurJeu("Code QR indisponible (installer segno, ou adresse réseau introuvable).", 404)
+    tampon = io.BytesIO()
+    segno.make(url, error="m").save(tampon, kind="svg", scale=10, border=2, dark="#151f6d", light="#ffffff",
+                                    svgclass=None, lineclass=None, xmldecl=False, svgns=True)
+    return Response(tampon.getvalue(), media_type="image/svg+xml")
+
+
+@app.get("/suivre")
+def page_suivi():
+    return FileResponse(STATIQUE / "suivre.html")
+
+
 @app.post("/api/ajuster")
 def ajuster(corps: dict = Body(...)):
     return _agir(jeu.ajuster, corps.get("equipe"), corps.get("kwh", 0), corps.get("billets", 0))

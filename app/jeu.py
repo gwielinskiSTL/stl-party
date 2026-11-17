@@ -572,6 +572,58 @@ def tirer_pige(etat: dict) -> dict:
     return {"type": "pige", "evenements": []}
 
 
+def publier_pige(etat: dict, publiee: bool) -> dict:
+    """L'animateur rend l'ordre de pige visible (ou non) sur la page de suivi des cellulaires.
+    Les objets attribués aux joueurs restent toujours privés."""
+    _verifier_phase(etat, "terminee")
+    etat["pige"]["publiee"] = bool(publiee)
+    _noter(etat, "L'ordre de la pige est publié sur les cellulaires." if publiee else "L'ordre de la pige est retiré des cellulaires.")
+    return {"type": "publication", "evenements": []}
+
+
+# ------------------------------------------------------------------------------ suivi sur cellulaire (lecture seule)
+NOMS_PHASES = {"mini_jeu": "Mini-jeu", "deplacement": "Déplacements", "fin_tour": "Fin du tour",
+               "bonus": "Résultats finaux", "terminee": "Pige des cadeaux"}
+
+
+def vue_suivi(affiche: dict | None, actuel: dict | None) -> dict:
+    """Ce que voient les cellulaires. « affiche » est l'état que l'écran projeté a fini de montrer (pour ne rien
+    dévoiler avant la salle) ; « actuel » sert seulement pour la publication de la pige.
+    Pendant le dévoilement final (phase bonus), points et journal sont cachés."""
+    if affiche is None:
+        return {"partie": False}
+    phase = affiche["phase"]
+    cache = phase == "bonus"
+    noms_objets = {o["id"]: o for o in affiche["reglages"]["objets"]}
+    ordre = classement(affiche) if not cache else sorted(affiche["equipes"], key=lambda e: e["id"])
+    equipes = []
+    for rang, e in enumerate(ordre, start=1):
+        equipes.append({
+            "id": e["id"], "nom": e["nom"], "joueurs": e["joueurs"], "rang": None if cache else rang,
+            "kwh": None if cache else e["kwh"], "billets": None if cache else e["billets"],
+            "arret": e["position"] + 1, "des": affiche["des"].get(str(e["id"])),
+            "objets": [{"id": o["id"], "nom": noms_objets.get(o["id"], {}).get("nom", o["id"]),
+                        "description": noms_objets.get(o["id"], {}).get("description", ""), "utilise": o["utilise"]}
+                       for o in e["objets"]],
+        })
+    jeu_du_tour = mini_jeu_du_tour(affiche) if phase in ("mini_jeu", "deplacement", "fin_tour") else None
+    pige_actuelle = (actuel or {}).get("pige") or affiche.get("pige")
+    pige = {"faite": bool(pige_actuelle), "publiee": bool(pige_actuelle and pige_actuelle.get("publiee"))}
+    if pige["publiee"]:
+        pige["ordre"] = [{"ordre": l["ordre"], "joueur": l["joueur"], "equipe": l["equipe"]} for l in pige_actuelle["lignes"]]
+    courant = affiche.get("courant")
+    return {
+        "partie": True, "tour": affiche["tour"], "nb_tours": affiche["nb_tours"], "phase": phase,
+        "etape": NOMS_PHASES.get(phase, phase),
+        "courant": None if courant is None else affiche["equipes"][courant]["nom"],
+        "courant_id": courant,
+        "mini_jeu": None if not jeu_du_tour else {"nom": jeu_du_tour["nom"], "description": jeu_du_tour["description"]},
+        "resultats_caches": cache, "equipes": equipes,
+        "journal": [] if cache else [l["texte"] for l in affiche["journal"][-8:]][::-1],
+        "pige": pige,
+    }
+
+
 # ===================================================================================== corrections de l'animateur
 def ajuster(etat: dict, ident, kwh: int = 0, billets: int = 0) -> dict:
     eq = _eq(etat, ident)

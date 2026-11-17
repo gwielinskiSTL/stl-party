@@ -1,5 +1,6 @@
 # Environnement Conda de STL Party :
 #   conda env create -f environment.yml   puis   conda activate stl-party
+#   mise à jour : conda env update -f environment.yml --prune
 name: stl-party
 channels:
   - conda-forge
@@ -7,6 +8,7 @@ dependencies:
   - python=3.11
   - fastapi
   - uvicorn
+  - segno          # code QR de la page de suivi (facultatif : sans lui, l'adresse s'affiche en texte)
   # tests seulement
   - pytest
   - httpx
