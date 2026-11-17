@@ -57,6 +57,16 @@ def lire() -> dict:
         raise ErreurConfig("Le plateau doit avoir au moins une case Recharge (R) pour le Billet d'or")
     cfg["plateau"]["liste"] = cases
 
+    pige = cfg.setdefault("pige", {})
+    poids = pige.get("poids_par_rang", [5, 4, 3, 2, 1])
+    if not poids or any(float(x) <= 0 for x in poids):
+        raise ErreurConfig("[pige] poids_par_rang doit contenir des nombres plus grands que 0")
+    if pige.get("avantage", "premier") not in ("premier", "dernier"):
+        raise ErreurConfig("[pige] avantage doit valoir « premier » ou « dernier »")
+    code = str(pige.get("code_prive", ""))
+    pige.pop("code_prive", None)          # jamais copié dans la partie ni renvoyé au navigateur
+    cfg["code_prive"] = os.getenv("PARTY_CODE_PRIVE") or code
+
     p = cfg["partie"]
     if int(p["nb_tours"]) < 1:
         raise ErreurConfig("nb_tours doit être au moins 1")

@@ -38,10 +38,7 @@ def jouer_jusqu_a_la_fin(etat, graine=0):
         elif phase == "fin_tour":
             jeu.tour_suivant(etat)
         elif phase == "bonus":
-            jeu.commencer_repartition(etat)
-        elif phase == "repartition":
-            libres = [i + 1 for i, p in enumerate(etat["repartition"]["positions"]) if p is None]
-            jeu.choisir_position(etat, h.choice(libres))
+            jeu.tirer_pige(etat)
         for e in etat["equipes"]:
             assert e["kwh"] >= 0 and e["billets"] >= 0
             assert len(e["objets"]) <= etat["reglages"]["partie"]["max_objets"]
@@ -174,30 +171,20 @@ def test_dernier_tour_aide_la_derniere_equipe(cfg, equipes):
     assert anim["evenements"][0]["titre"] == "Dernier arrêt"
 
 
-def test_repartition_a_tour_de_role(cfg, equipes):
-    equipes[4]["joueurs"] = equipes[4]["joueurs"][:3]     # une équipe plus petite
-    etat = jeu.nouvelle_partie(cfg, equipes)
-    etat["phase"] = "bonus"
-    etat["equipes"][2]["billets"] = 3
-    jeu.commencer_repartition(etat)
-    rep = etat["repartition"]
-    assert len(rep["positions"]) == 23
-    assert rep["tours"][0] == 2                            # la première au classement choisit d'abord
-    assert rep["tours"].count(4) == 3
-    jeu.choisir_position(etat, 23)
-    with pytest.raises(jeu.ErreurJeu, match="déjà prise"):
-        jeu.choisir_position(etat, 23)
-
-
 @pytest.mark.parametrize("graine", range(30))
 def test_parties_completes(cfg, equipes, graine):
     jeu.hasard.seed(graine)
     etat = jeu.nouvelle_partie(cfg, equipes)
     jouer_jusqu_a_la_fin(etat, graine)
-    rep = etat["repartition"]["positions"]
-    assert None not in rep and len(rep) == 25
-    assert all(rep.count(e["id"]) == 5 for e in etat["equipes"])
+    lignes = etat["pige"]["lignes"]
+    assert [l["ordre"] for l in lignes] == list(range(1, 26))
+    assert sorted(l["rang"] for l in lignes) == list(range(1, 26))
+    assert sorted((l["equipe"], l["joueur"]) for l in lignes) == sorted((e["id"], j) for e in etat["equipes"] for j in e["joueurs"])
     assert len(etat["bonus"]) == 3
+    for a in etat["pige"]["objets"]:                       # chaque objet va à un membre de son équipe
+        assert a["joueur"] in etat["equipes"][a["equipe"]]["joueurs"]
+    for e in etat["equipes"]:
+        assert sorted(a["indice"] for a in etat["pige"]["objets"] if a["equipe"] == e["id"]) == list(range(len(e["objets"])))
 
 
 def test_case_evenement_annoncee_en_grand(cfg, equipes):
@@ -278,3 +265,65 @@ def test_terminus_annonce_a_sa_case(cfg, equipes):
     anim = jeu.lancer(etat)
     terminus = next(ev for ev in anim["evenements"] if ev["code"] == "terminus")
     assert anim["chemin"][terminus["etape"] - 1] == 0
+
+
+
+# ------------------------------------------------------------------------------ équipes au hasard
+def test_repartir_equipes_equilibrees():
+    personnes = [f"Personne {k}" for k in range(23)] + ["personne 3", "  ", "Personne   4"]   # doublons et vide
+    equipes = jeu.repartir_equipes(personnes, 5)
+    tous = [p for e in equipes for p in e]
+    assert len(tous) == 23 and len(set(tous)) == 23
+    assert sorted(len(e) for e in equipes) == [4, 4, 5, 5, 5]
+
+
+@pytest.mark.parametrize("personnes, nb, message", [
+    (["A", "B"], 5, "au moins 5"), (["A", "B", "C"], 1, "entre 2 et 8"), (["A"] * 9, "x", "invalide"),
+])
+def test_repartir_equipes_invalide(personnes, nb, message):
+    with pytest.raises(jeu.ErreurJeu, match=message):
+        jeu.repartir_equipes(personnes, nb)
+
+
+# ------------------------------------------------------------------------------ pige privée
+def _partie_finie(cfg, equipes, billets=(4, 3, 2, 1, 0)):
+    etat = jeu.nouvelle_partie(cfg, equipes)
+    for e, b in zip(etat["equipes"], billets):
+        e["billets"] = b
+    etat["phase"] = "bonus"
+    return etat
+
+
+def test_poids_selon_le_rang_final(cfg, equipes):
+    etat = _partie_finie(cfg, equipes, billets=(0, 1, 4, 2, 3))
+    assert jeu.poids_equipes(etat) == {2: 5.0, 4: 4.0, 3: 3.0, 1: 2.0, 0: 1.0}
+
+
+def test_simulation_favorise_sans_garantir(cfg, equipes):
+    etat = _partie_finie(cfg, equipes)
+    sim = {s["equipe"]: s for s in jeu.simuler_pige(etat, 4000)["equipes"]}
+    assert sim[0]["rang_moyen"] < sim[2]["rang_moyen"] < sim[4]["rang_moyen"]
+    assert sim[4]["chance_premier"] > 0.01                 # la dernière équipe peut quand même finir 1re
+    assert abs(sum(s["chance_premier"] for s in sim.values()) - 1) < 0.01
+
+
+def test_tirage_reproduit_la_loi_sans_remise(cfg, equipes):
+    """Chance d'être tiré 1er = poids / somme des poids (5 membres × (5+4+3+2+1) = 75)."""
+    etat = _partie_finie(cfg, equipes)
+    sim = {s["equipe"]: s for s in jeu.simuler_pige(etat, 20000)["equipes"]}
+    for eq, attendu in {0: 25 / 75, 4: 5 / 75}.items():
+        assert abs(sim[eq]["chance_premier"] - attendu) < 0.02
+
+
+def test_avantage_dernier_inverse_l_ordre(cfg, equipes):
+    cfg["pige"]["avantage"] = "dernier"
+    etat = _partie_finie(cfg, equipes)
+    jeu.tirer_pige(etat)
+    lignes = etat["pige"]["lignes"]
+    assert lignes[0]["rang"] == 25 and lignes[-1]["rang"] == 1
+    assert etat["phase"] == "terminee"
+
+
+def test_pige_seulement_apres_les_bonus(cfg, equipes):
+    with pytest.raises(jeu.ErreurJeu):
+        jeu.tirer_pige(jeu.nouvelle_partie(cfg, equipes))

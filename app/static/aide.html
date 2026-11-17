@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Règles — STL Party</title>
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-16f">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17a">
   <style>
     .aide { max-width: 980px; }
     .aide h2 { font-size: 18px; margin-bottom: 10px; }
@@ -29,9 +29,9 @@
   <div class="page aide">
     <section class="bloc">
       <h2>Le but</h2>
-      <p>Finir avec le plus de <strong>Billets d'or</strong> (puis de kWh, en cas d'égalité). Le classement final décide
-        quelle équipe choisit ses positions dans l'échange en premier. Les objets achetés pendant la partie servent ensuite
-        pendant l'échange de cadeaux.</p>
+      <p>Finir avec le plus de <strong>Billets d'or</strong> (puis de kWh, en cas d'égalité). Le classement final donne
+        plus de chances aux membres des meilleures équipes lors de la pige des cadeaux. Les objets achetés pendant la partie
+        sont remis en secret à des membres de l'équipe et servent pendant l'échange.</p>
     </section>
     <section class="bloc">
       <h2>Un tour</h2>
@@ -62,8 +62,11 @@
         <li>Au début du dernier tour, l'équipe dernière reçoit +10 kWh.</li>
         <li>Trois étoiles bonus (+1 Billet d'or chacune) : <strong>Grand voyageur</strong> (le plus d'arrêts),
           <strong>Pleine charge</strong> (le plus de kWh gagnés) et <strong>Pas de chance</strong> (le plus de malchances).</li>
-        <li>Les équipes choisissent ensuite leurs positions dans l'échange, une à la fois, dans l'ordre du classement.
-          Astuce : quand on peut voler, choisir <strong>en dernier</strong> est souvent un avantage.</li>
+        <li><strong>La pige :</strong> tous les participants sont classés par un tirage au hasard sans remise. Chaque personne
+          pèse selon le rang final de son équipe (5, 4, 3, 2, 1 par défaut) : la meilleure équipe a plus de chances de bien
+          se classer, mais la dernière peut aussi finir en tête.</li>
+        <li>Le classement de la pige reste <strong>privé</strong> : l'animateur l'ouvre sur son poste et appelle les
+          participants dans l'ordre. Les objets achetés sont attribués au hasard à des membres de chaque équipe.</li>
       </ul>
     </section>
     <section class="bloc">
@@ -73,7 +76,8 @@
         <li>Cliquer une équipe dans le classement permet de corriger ses kWh ou ses Billets.</li>
         <li>Une fenêtre fermée par erreur (Échap) se rouvre avec <strong>Décision en attente…</strong>.</li>
         <li>La partie est enregistrée à chaque action : on peut recharger la page sans rien perdre.</li>
-        <li>Mini-jeux, prix, nombre de dés et plateau se modifient dans <code>STL_PARTY.toml</code> (avant la partie).</li>
+        <li>Mini-jeux, prix, nombre de dés, plateau et poids de la pige se modifient dans <code>STL_PARTY.toml</code> (avant la partie).</li>
+        <li>Pas encore d'équipes ? Collez la liste des participants dans « Équipes au hasard » à l'écran de départ.</li>
       </ul>
     </section>
   </div>

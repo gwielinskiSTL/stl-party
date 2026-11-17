@@ -1,0 +1,15 @@
+2026-11-17 — Équipes au hasard et pige privée des cadeaux
+
+- Écran de départ : « Équipes au hasard ». On colle la liste des participants (un par ligne ou séparés par des
+  virgules) et le jeu forme des équipes équilibrées (une personne d'écart au plus), doublons retirés.
+- Fin de partie : le choix des positions par les équipes est remplacé par la PIGE. Tirage pondéré sans remise sur
+  tous les participants (méthode d'Efraimidis-Spirakis, même loi que des tirages successifs) ; chaque personne a le
+  poids du rang final de son équipe ([pige] poids_par_rang, 5-4-3-2-1 par défaut). [pige] avantage indique si le
+  rang 1 pige en premier (défaut) ou en dernier.
+- Les objets achetés par chaque équipe sont attribués au hasard à ses membres.
+- Confidentialité : l'écran projeté et /api/partie n'affichent que « La pige est faite ! » (nombre de participants
+  et d'objets). L'ordre et les objets sont sur la page /prive (export CSV, impression, recherche, objets à cocher),
+  servie seulement au poste qui fait tourner le jeu ; avec code_prive (ou PARTY_CODE_PRIVE), un code est demandé
+  depuis les autres postes. Le code n'est jamais renvoyé au navigateur ni copié dans la partie.
+- La page privée montre aussi les chances estimées de chaque équipe (10 000 piges simulées) : rang moyen, chance
+  d'avoir le 1er rang, chance d'un membre d'être dans le premier quart.

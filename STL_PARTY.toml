@@ -20,6 +20,17 @@ gains_mini_jeu = [10, 6, 4, 2, 0]  # kWh gagnés selon le rang au mini-jeu (1er,
 des_mini_jeu = [3, 3, 2, 2, 2]     # nombre de dés lancés selon le rang au mini-jeu
 bonus_dernier_tour = 10            # kWh donnés à l'équipe dernière au début du dernier tour
 
+[pige]
+# Classement PRIVÉ de la pige des cadeaux, tiré à la fin de la partie (page /prive de l'animateur).
+# Tirage pondéré sans remise sur tous les participants : chaque joueur a le poids du rang final de son équipe.
+# Avec [5, 4, 3, 2, 1], un membre de la 1re équipe a 5 fois plus de chances qu'un membre de la 5e d'être tiré à
+# chaque étape : la meilleure équipe se classe mieux en moyenne, mais rien n'est joué d'avance.
+poids_par_rang = [5, 4, 3, 2, 1]
+avantage = "premier"     # "premier" : le rang 1 pige en premier ; "dernier" : le rang 1 pige en dernier
+                         # (dans un échange où l'on peut voler, passer en dernier est souvent un avantage)
+simulations = 10000      # piges simulées pour estimer les chances de chaque équipe (affichées sur la page privée)
+code_prive = ""          # vide : page privée lisible SEULEMENT sur ce poste ; sinon, code demandé ailleurs sur le réseau
+
 [cases]
 recharge = 3      # case Recharge : + kWh
 bouchon = 3       # case Bouchon : − kWh

@@ -30,8 +30,14 @@ Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est abs
    Une case Événement s'annonce en plein écran ; on appuie sur « Continuer » pour poursuivre.
 4. Après 6 tours : **étoiles bonus** (Grand voyageur, Pleine charge, Pas de chance) dévoilées une à une par une
    roulette, **classement final** révélé de la dernière place vers la première, puis **grande finale** en duel pour
-   les deux premières places (départage aux kWh en cas d'égalité, fanfare et confettis). Ensuite, **choix des
-   positions** à tour de rôle et **liste imprimable** avec les objets à utiliser.
+   les deux premières places (départage aux kWh en cas d'égalité, fanfare et confettis).
+5. **Pige des cadeaux (privée)** : tous les participants sont classés par un tirage pondéré **sans remise** — chaque
+   personne a le poids du rang final de son équipe (`[pige] poids_par_rang`, 5-4-3-2-1 par défaut). Les objets achetés
+   sont attribués au hasard aux membres de chaque équipe. L'écran projeté annonce seulement « La pige est faite ! » ;
+   l'ordre et les objets s'affichent sur la page **`/prive`**, lisible seulement sur le poste qui fait tourner le jeu
+   (ou avec `code_prive`), avec export CSV, impression et estimation des chances par simulation.
+
+Les équipes peuvent être formées **au hasard** : coller la liste des participants à l'écran de départ.
    Les sons sont synthétisés par le navigateur ; le bouton **Son** de l'en-tête les coupe.
 
 Toutes les règles et valeurs sont dans [`STL_PARTY.toml`](STL_PARTY.toml) : nombre de tours, dés et kWh par rang,
@@ -49,6 +55,7 @@ stl-party/
 │   ├── jeu.py           ← toutes les règles (état = dictionnaire JSON)
 │   ├── config.py        ← lecture et validation de STL_PARTY.toml
 │   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG), sons.js,
+│                          prive.html + prive.js (classement privé de la pige),
 │                          style.css (charte), aide.html, images/ (images d'objets facultatives)
 ├── tests/               ← pytest : règles, 30 parties complètes au hasard, API
 ├── docs/                ← charte graphique, notes de mise à jour datées
@@ -73,7 +80,9 @@ stl-party/
 | `POST /api/lancer` | lance les dés de l'équipe courante |
 | `POST /api/decision` | `{"acheter": bool}` · `{"objet": id \| null}` · `{"cible": id, "quoi": "kwh" \| "billet"}` |
 | `POST /api/tour-suivant` | tour suivant, ou bonus après le dernier |
-| `POST /api/repartition/commencer` · `POST /api/repartition` | choix des positions `{"position": n}` |
+| `POST /api/equipes/aleatoires` | `{"personnes": [...], "nb_equipes": 5}` → équipes équilibrées au hasard |
+| `POST /api/pige` | tire la pige privée (après les bonus) ; la vue publique n'en montre que le résumé |
+| `GET /api/pige` · `GET /api/pige.csv` · `GET /prive` | **privé** : poste local seulement, ou code `code_prive` |
 | `POST /api/ajuster` · `POST /api/objet` · `POST /api/annuler` | corrections, objet utilisé, retour arrière |
 
 ## Tests

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STL Party</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%23151f6d%27/%3E%3Ccircle cx=%278%27 cy=%278%27 r=%273.5%27 fill=%27%2300a9e0%27/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-16f">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17a">
 </head>
 <body>
   <header class="entete-stl">
@@ -60,6 +60,26 @@
 
     <!-- ============================================================ configuration -->
     <section id="vue-config" hidden>
+      <div class="bloc">
+        <div class="bloc-tete">
+          <h2>Équipes au hasard</h2>
+          <span class="note">Facultatif : on peut aussi remplir les équipes à la main plus bas</span>
+        </div>
+        <div class="hasard">
+          <label class="champ hasard-liste"><span>Participants</span>
+            <textarea id="hasard-personnes" placeholder="Un nom par ligne (ou séparés par des virgules)" rows="8"></textarea>
+            <small id="hasard-compte">0 participant</small>
+          </label>
+          <div class="hasard-actions">
+            <label class="champ"><span>Nombre d'équipes</span>
+              <input type="number" id="hasard-nb" min="2" max="8" value="5">
+            </label>
+            <button class="btn btn-principal" id="btn-hasard">Répartir au hasard</button>
+            <p class="note">Les équipes sont équilibrées (une personne d'écart au plus). On peut cliquer encore pour
+              mélanger à nouveau ; les noms d'équipe sont conservés.</p>
+          </div>
+        </div>
+      </div>
       <div class="bloc">
         <div class="bloc-tete">
           <h2>Nouvelle partie : les équipes</h2>
@@ -212,8 +232,8 @@
   <div class="revelation" id="revelation" role="dialog" aria-modal="true" aria-live="polite" hidden></div>
   <div class="confettis" id="confettis" aria-hidden="true"></div>
 
-  <script src="/static/sons.js?v=2026-11-16f"></script>
-  <script src="/static/illustrations.js?v=2026-11-16f"></script>
-  <script src="/static/app.js?v=2026-11-16f"></script>
+  <script src="/static/sons.js?v=2026-11-17a"></script>
+  <script src="/static/illustrations.js?v=2026-11-17a"></script>
+  <script src="/static/app.js?v=2026-11-17a"></script>
 </body>
 </html>

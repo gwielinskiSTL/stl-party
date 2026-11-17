@@ -248,5 +248,7 @@ const ILLUSTRATIONS = (() => {
     billet: () => CASES.billet(),
     objet: (id) => (OBJETS[id] || (() => generique("Objet")))(),
     depanneur,
+    pige: () => svg(`${fond("bleu-pale")}${cadeau(62, 132, 70, "vert", "marine")}${cadeau(138, 136, 62, "cyan", "marine")}
+      ${cadeau(100, 74, 64, "blanc", "cyan")}${etincelles([[30, 60, 8], [172, 54, 9], [178, 120, 6]], "marine")}`, "Pile de cadeaux"),
   };
 })();

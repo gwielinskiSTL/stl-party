@@ -9,8 +9,7 @@ Phases :
     deplacement   chaque équipe, dans l'ordre du mini-jeu, lance ses dés et avance
     fin_tour      tout le monde a joué ; on passe au tour suivant (ou aux bonus)
     bonus         étoiles bonus et classement final
-    repartition   les équipes choisissent leurs positions dans l'échange, à tour de rôle
-    terminee      ordre de l'échange et objets à utiliser
+    terminee      pige tirée : classement privé des participants et objets distribués (page /prive)
 """
 from __future__ import annotations
 
@@ -79,6 +78,7 @@ def nouvelle_partie(cfg: dict, equipes: list[dict]) -> dict:
         "reglages": {
             "partie": copy.deepcopy(p), "cases": copy.deepcopy(cfg["cases"]),
             "mini_jeux": copy.deepcopy(cfg["mini_jeux"]), "objets": copy.deepcopy(cfg["objets"]),
+            "pige": copy.deepcopy(cfg.get("pige") or {}),
         },
         "plateau": cases,
         "nb_tours": int(p["nb_tours"]),
@@ -87,7 +87,7 @@ def nouvelle_partie(cfg: dict, equipes: list[dict]) -> dict:
         "equipes": liste,
         "position_billet": None,
         "file": [], "des": {}, "courant": None, "attente": None,
-        "bonus": [], "repartition": None,
+        "bonus": [], "pige": None,
         "journal": [],
     }
     _placer_billet(etat)
@@ -454,44 +454,122 @@ def _calculer_bonus(etat: dict) -> dict:
     return {"type": "bonus", "evenements": []}
 
 
-# ===================================================================================== répartition des positions
-def commencer_repartition(etat: dict) -> dict:
-    """Les équipes choisissent leurs positions à tour de rôle, dans l'ordre du classement final."""
-    _verifier_phase(etat, "bonus")
-    ordre_equipes = [e["id"] for e in classement(etat)]
-    restants = {e["id"]: len(e["joueurs"]) for e in etat["equipes"]}
-    tours = []
-    while any(restants.values()):
-        for i in ordre_equipes:
-            if restants[i]:
-                tours.append(i)
-                restants[i] -= 1
-    etat["repartition"] = {"classement": ordre_equipes, "tours": tours, "indice": 0,
-                           "positions": [None] * len(tours)}
-    etat["phase"] = "repartition"
-    _noter(etat, "Répartition des positions de l'échange : le premier au classement choisit en premier.")
-    return {"type": "repartition", "evenements": []}
-
-
-def choisir_position(etat: dict, position: int) -> dict:
-    _verifier_phase(etat, "repartition")
-    rep = etat["repartition"]
+# ===================================================================================== équipes au hasard
+def repartir_equipes(personnes: list, nb_equipes) -> list[list[str]]:
+    """Mélange les participants et forme nb_equipes équipes équilibrées (tailles égales à une personne près)."""
     try:
-        position = int(position)
+        nb = int(nb_equipes)
     except (TypeError, ValueError):
-        raise ErreurJeu("Position invalide.")
-    if not 1 <= position <= len(rep["positions"]):
-        raise ErreurJeu(f"La position doit être entre 1 et {len(rep['positions'])}.")
-    if rep["positions"][position - 1] is not None:
-        raise ErreurJeu(f"La position {position} est déjà prise.")
-    ident = rep["tours"][rep["indice"]]
-    rep["positions"][position - 1] = ident
-    rep["indice"] += 1
-    _noter(etat, f"{_eq(etat, ident)['nom']} prend la position {position}.")
-    if rep["indice"] >= len(rep["tours"]):
-        etat["phase"] = "terminee"
-        _noter(etat, "Toutes les positions sont choisies. Place à l'échange !")
-    return {"type": "repartition", "evenements": []}
+        raise ErreurJeu("Nombre d'équipes invalide.")
+    if not 2 <= nb <= 8:
+        raise ErreurJeu("Il faut entre 2 et 8 équipes.")
+    noms, vus = [], set()
+    for brut in personnes or []:
+        nom = " ".join(str(brut).split())
+        if nom and nom.lower() not in vus:
+            vus.add(nom.lower())
+            noms.append(nom)
+    if len(noms) < nb:
+        raise ErreurJeu(f"Il faut au moins {nb} participants pour former {nb} équipes.")
+    hasard.shuffle(noms)
+    equipes = [noms[i::nb] for i in range(nb)]
+    hasard.shuffle(equipes)          # les équipes plus nombreuses ne sont pas toujours les premières
+    return equipes
+
+
+# ===================================================================================== pige privée des cadeaux
+PIGE_DEFAUT = {"poids_par_rang": [5, 4, 3, 2, 1], "avantage": "premier", "simulations": 10000}
+
+
+def reglages_pige(etat: dict) -> dict:
+    return {**PIGE_DEFAUT, **(etat["reglages"].get("pige") or {})}
+
+
+def poids_equipes(etat: dict) -> dict[int, float]:
+    """Poids de chaque joueur selon le rang final de son équipe (1re équipe → premier poids de la liste)."""
+    poids = [float(x) for x in reglages_pige(etat)["poids_par_rang"]]
+    return {e["id"]: poids[min(rang, len(poids) - 1)] for rang, e in enumerate(classement(etat))}
+
+
+def _participants(etat: dict) -> list[tuple[int, str]]:
+    return [(e["id"], j) for e in etat["equipes"] for j in e["joueurs"]]
+
+
+def _tirage(participants: list, poids: dict, h: random.Random) -> list:
+    """Tirage pondéré sans remise : on tire le 1er rang parmi tous (chance ∝ poids), puis le 2e parmi ceux qui
+    restent, etc. Implémenté par la méthode d'Efraimidis-Spirakis (clé = u^(1/poids), tri décroissant), qui donne
+    exactement la même loi que des tirages successifs sans remise."""
+    cles = [(h.random() ** (1.0 / poids[eq]), i) for i, (eq, _) in enumerate(participants)]
+    cles.sort(reverse=True)
+    return [participants[i] for _, i in cles]
+
+
+def simuler_pige(etat: dict, n: int | None = None, graine: int = 1) -> dict:
+    """Simule n piges pour estimer les chances de chaque équipe (rang moyen d'un membre, chance d'avoir le 1er rang,
+    chance qu'un membre donné finisse dans le premier quart)."""
+    n = int(n or reglages_pige(etat)["simulations"])
+    h = random.Random(graine)
+    participants = _participants(etat)
+    poids = poids_equipes(etat)
+    total = len(participants)
+    quart = max(1, -(-total // 4))
+    taille = {e["id"]: len(e["joueurs"]) for e in etat["equipes"]}
+    somme = {i: 0 for i in taille}
+    premier = {i: 0 for i in taille}
+    top = {i: 0 for i in taille}
+    for _ in range(n):
+        for rang, (eq, _) in enumerate(_tirage(participants, poids, h), start=1):
+            somme[eq] += rang
+            if rang == 1:
+                premier[eq] += 1
+            if rang <= quart:
+                top[eq] += 1
+    return {
+        "simulations": n, "participants": total, "premier_quart": quart,
+        "equipes": [{
+            "equipe": i, "poids": poids[i], "membres": taille[i],
+            "rang_moyen": round(somme[i] / (n * taille[i]), 1),
+            "chance_premier": round(premier[i] / n, 3),
+            "chance_premier_quart": round(top[i] / (n * taille[i]), 3),
+        } for i in sorted(taille)],
+    }
+
+
+def tirer_pige(etat: dict) -> dict:
+    """Tire le classement privé de la pige et distribue au hasard les objets de chaque équipe à ses membres."""
+    _verifier_phase(etat, "bonus")
+    reglages = reglages_pige(etat)
+    if reglages["avantage"] not in ("premier", "dernier"):
+        raise ErreurJeu("[pige] avantage doit valoir « premier » ou « dernier ».")
+    participants = _participants(etat)
+    poids = poids_equipes(etat)
+    rangs = _tirage(participants, poids, hasard)
+    n = len(rangs)
+    lignes = []
+    for rang, (eq, joueur) in enumerate(rangs, start=1):
+        ordre = rang if reglages["avantage"] == "premier" else n + 1 - rang
+        lignes.append({"ordre": ordre, "rang": rang, "equipe": eq, "joueur": joueur})
+    lignes.sort(key=lambda l: l["ordre"])
+
+    objets = []
+    for e in etat["equipes"]:
+        membres = list(e["joueurs"])
+        hasard.shuffle(membres)
+        indices = list(range(len(e["objets"])))
+        hasard.shuffle(indices)
+        for k, indice in enumerate(indices):
+            objets.append({"equipe": e["id"], "indice": indice, "joueur": membres[k % len(membres)]})
+
+    etat["pige"] = {
+        "tiree_le": datetime.now().isoformat(timespec="seconds"),
+        "avantage": reglages["avantage"], "poids": {str(k): v for k, v in poids.items()},
+        "classement_equipes": [e["id"] for e in classement(etat)],
+        "lignes": lignes, "objets": objets,
+        "simulation": simuler_pige(etat),
+    }
+    etat["phase"] = "terminee"
+    _noter(etat, f"La pige des cadeaux est tirée pour {n} participants (classement privé).")
+    return {"type": "pige", "evenements": []}
 
 
 # ===================================================================================== corrections de l'animateur

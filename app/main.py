@@ -9,15 +9,18 @@ Toutes les erreurs sont renvoyées en JSON {"erreur": "..."} ; une erreur n'arr�
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
+import secrets
 import socket
 import threading
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import Body, FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import config, jeu
@@ -80,10 +83,14 @@ def _charger() -> dict | None:
 
 
 def _vue(etat: dict | None) -> dict:
+    """Vue publique (écran projeté) : le détail de la pige n'y figure jamais."""
     if etat is None:
         return {"etat": None, "peut_annuler": False}
+    public = dict(etat)
+    if etat.get("pige"):
+        public["pige"] = {"faite": True, "participants": len(etat["pige"]["lignes"]), "objets": len(etat["pige"]["objets"])}
     return {
-        "etat": etat,
+        "etat": public,
         "peut_annuler": bool(_lire_json("historique.json", [])),
         "classement": [e["id"] for e in jeu.classement(etat)],
         "mini_jeu": jeu.mini_jeu_du_tour(etat) if etat["phase"] in ("mini_jeu", "deplacement", "fin_tour") else None,
@@ -176,14 +183,71 @@ def tour_suivant():
     return _agir(jeu.tour_suivant)
 
 
-@app.post("/api/repartition/commencer")
-def commencer_repartition():
-    return _agir(jeu.commencer_repartition)
+@app.post("/api/equipes/aleatoires")
+def equipes_aleatoires(corps: dict = Body(...)):
+    """Forme des équipes au hasard à partir d'une liste de participants (avant la partie)."""
+    return {"equipes": jeu.repartir_equipes(corps.get("personnes") or [], corps.get("nb_equipes") or 5)}
 
 
-@app.post("/api/repartition")
-def repartition(corps: dict = Body(...)):
-    return _agir(jeu.choisir_position, corps.get("position"))
+@app.post("/api/pige")
+def tirer_pige():
+    return _agir(jeu.tirer_pige)
+
+
+# ------------------------------------------------------------------------------ page privée de l'animateur
+LOCAL = {"127.0.0.1", "::1", "localhost"}
+
+
+def _verifier_prive(request: Request):
+    """Sans code_prive : lisible seulement sur le poste qui fait tourner le jeu. Avec un code : code exigé."""
+    code = config.lire()["code_prive"]
+    fourni = request.headers.get("X-Code-Prive") or request.query_params.get("code") or ""
+    if code:
+        if not secrets.compare_digest(fourni, code):
+            raise jeu.ErreurJeu("Code de la page privée requis ou invalide.", 403)
+    elif (request.client.host if request.client else "") not in LOCAL:
+        raise jeu.ErreurJeu("Le classement privé ne s'ouvre que sur le poste qui fait tourner le jeu "
+                            "(ou ajoutez code_prive dans [pige] de STL_PARTY.toml).", 403)
+    return code != ""
+
+
+@app.get("/api/pige")
+def lire_pige(request: Request):
+    _verifier_prive(request)
+    etat = _charger()
+    if etat is None or not etat.get("pige"):
+        raise jeu.ErreurJeu("La pige n'est pas encore tirée.", 404)
+    return {
+        "pige": etat["pige"],
+        "equipes": [{"id": e["id"], "nom": e["nom"], "objets": e["objets"], "billets": e["billets"], "kwh": e["kwh"]}
+                    for e in etat["equipes"]],
+        "objets": etat["reglages"]["objets"],
+    }
+
+
+@app.get("/api/pige.csv")
+def pige_csv(request: Request):
+    _verifier_prive(request)
+    donnees = lire_pige(request)
+    noms = {e["id"]: e["nom"] for e in donnees["equipes"]}
+    objets = {o["id"]: o["nom"] for o in donnees["objets"]}
+    par_joueur: dict = {}
+    for a in donnees["pige"]["objets"]:
+        e = donnees["equipes"][a["equipe"]]
+        par_joueur.setdefault((a["equipe"], a["joueur"]), []).append(objets.get(e["objets"][a["indice"]]["id"], ""))
+    sortie = io.StringIO()
+    ecrivain = csv.writer(sortie, delimiter=";")
+    ecrivain.writerow(["Ordre de pige", "Participant", "Équipe", "Rang tiré (1 = meilleur)", "Objets"])
+    for l in donnees["pige"]["lignes"]:
+        ecrivain.writerow([l["ordre"], l["joueur"], noms[l["equipe"]], l["rang"],
+                           ", ".join(par_joueur.get((l["equipe"], l["joueur"]), []))])
+    return Response("\ufeff" + sortie.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="pige_stl_party.csv"'})
+
+
+@app.get("/prive")
+def page_privee():
+    return FileResponse(STATIQUE / "prive.html")
 
 
 @app.post("/api/ajuster")

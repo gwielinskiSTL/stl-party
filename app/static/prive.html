@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Classement privé — STL Party</title>
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17a">
+</head>
+<body>
+  <script>try { if (localStorage.getItem("stl-party.mode-noel") === "1") document.body.classList.add("noel"); } catch (_) {}</script>
+  <header class="entete-stl">
+    <div class="entete-stl-int">
+      <div class="marque">
+        <span class="fleche" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div><div class="marque-nom">Classement privé</div><div class="marque-sous">STL Party · pige des cadeaux · page de l'animateur</div></div>
+      </div>
+      <div class="entete-stl-droite">
+        <div class="boutons-entete pas-imprimer">
+          <button class="btn-entete" id="btn-masquer" hidden>Masquer</button>
+          <button class="btn-entete" id="btn-imprimer" hidden>Imprimer</button>
+          <a class="btn-entete" id="btn-csv" hidden>Télécharger (CSV)</a>
+        </div>
+        <img class="logo" src="/static/logo-stl.svg" alt="STL" height="40" onerror="this.remove()">
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <div id="alerte" class="alerte" role="alert" hidden></div>
+
+    <section class="bloc prive-garde" id="garde">
+      <h2>Page privée : ne pas projeter</h2>
+      <p>Cette page contient l'ordre secret de la pige et les objets attribués à chaque participant. Vérifiez que
+        l'écran n'est pas partagé avant de l'afficher.</p>
+      <form id="form-code" class="code-prive" hidden>
+        <label class="champ"><span>Code de la page privée</span><input type="password" id="code" autocomplete="off"></label>
+        <button class="btn btn-secondaire">Valider</button>
+      </form>
+      <div class="actions" style="justify-content:flex-start"><button class="btn btn-principal btn-geant" style="width:auto" id="btn-afficher">Afficher le classement</button></div>
+    </section>
+
+    <div id="contenu" hidden>
+      <section class="bloc">
+        <div class="bloc-tete"><h2>Ordre de la pige</h2><span class="note" id="resume"></span></div>
+        <div class="champ recherche pas-imprimer"><input type="search" id="recherche" placeholder="Chercher un participant ou une équipe" aria-label="Chercher"></div>
+        <table class="table-pige">
+          <thead><tr><th>Ordre</th><th>Participant</th><th>Équipe</th><th>Objets</th></tr></thead>
+          <tbody id="lignes"></tbody>
+        </table>
+      </section>
+
+      <section class="bloc">
+        <div class="bloc-tete"><h2>Objets par équipe</h2><span class="note">Pour remettre les cartes d'objets aux bonnes personnes</span></div>
+        <div class="objets-equipes" id="objets-equipes"></div>
+      </section>
+
+      <section class="bloc">
+        <div class="bloc-tete"><h2>Comment le classement est tiré</h2><span class="note" id="simulation-note"></span></div>
+        <p id="methode" style="margin-bottom:14px"></p>
+        <table class="table-pige table-chances">
+          <thead><tr><th>Rang final</th><th>Équipe</th><th>Poids</th><th>Rang moyen d'un membre</th><th>Chance d'avoir le 1er</th><th id="th-quart">Chance d'un membre d'être dans le premier quart</th></tr></thead>
+          <tbody id="chances"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <script src="/static/illustrations.js?v=2026-11-17a"></script>
+  <script src="/static/prive.js?v=2026-11-17a"></script>
+</body>
+</html>

@@ -77,3 +77,47 @@ def test_ajuster_et_objets(equipes):
     assert q["kwh"] == 15 and q["billets"] == 1
     assert r["partie"]["classement"][0] == 2
     assert client.post("/api/objet", json={"equipe": 2, "indice": 0}).status_code == 400
+
+
+
+def test_equipes_aleatoires():
+    r = client.post("/api/equipes/aleatoires", json={"personnes": [f"P{k}" for k in range(12)], "nb_equipes": 3}).json()
+    assert sorted(len(e) for e in r["equipes"]) == [4, 4, 4]
+    assert client.post("/api/equipes/aleatoires", json={"personnes": ["A"], "nb_equipes": 3}).status_code == 400
+
+
+def _jusqu_a_la_pige(equipes, tmp_path):
+    import json
+    client.post("/api/partie", json={"equipes": equipes})
+    fichier = tmp_path / "PARTIES" / "partie.json"
+    etat = json.loads(fichier.read_text(encoding="utf-8"))
+    etat["phase"] = "bonus"
+    etat["equipes"][0]["objets"] = [{"id": "gel", "utilise": False}]
+    fichier.write_text(json.dumps(etat), encoding="utf-8")
+    return client.post("/api/pige").json()
+
+
+def test_pige_jamais_dans_la_vue_publique(equipes, tmp_path):
+    r = _jusqu_a_la_pige(equipes, tmp_path)
+    publique = r["partie"]["etat"]["pige"]
+    assert publique == {"faite": True, "participants": 25, "objets": 1}
+    assert "lignes" not in client.get("/api/partie").json()["etat"]["pige"]
+    assert "Joueur" not in str(client.get("/api/partie").json()["etat"]["pige"])
+
+
+def test_page_privee_refusee_hors_du_poste(equipes, tmp_path):
+    _jusqu_a_la_pige(equipes, tmp_path)
+    r = client.get("/api/pige")                      # le client de test n'est pas « localhost »
+    assert r.status_code == 403 and "poste" in r.json()["erreur"]
+    assert client.get("/api/pige.csv").status_code == 403
+
+
+def test_page_privee_avec_code(equipes, tmp_path, monkeypatch):
+    monkeypatch.setenv("PARTY_CODE_PRIVE", "sapin")
+    _jusqu_a_la_pige(equipes, tmp_path)
+    assert client.get("/api/pige", params={"code": "faux"}).status_code == 403
+    r = client.get("/api/pige", headers={"X-Code-Prive": "sapin"})
+    assert r.status_code == 200 and len(r.json()["pige"]["lignes"]) == 25
+    csv_ = client.get("/api/pige.csv", params={"code": "sapin"})
+    assert csv_.status_code == 200 and "Ordre de pige" in csv_.text and "Gel" in csv_.text
+    assert "sapin" not in client.get("/api/configuration").text

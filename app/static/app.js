@@ -7,7 +7,7 @@
 const $ = (sel) => document.querySelector(sel);
 const PHASES = {
   mini_jeu: "Mini-jeu", deplacement: "Déplacements", fin_tour: "Fin du tour",
-  bonus: "Bonus", repartition: "Choix des positions", terminee: "Échange",
+  bonus: "Bonus", terminee: "Pige",
 };
 const SYMBOLES = { T: "T", R: "+", B: "−", E: "?", I: "!", F: "◐", D: "⇄", M: "◆" };
 const LIBELLES = { T: "Terminus", R: "Recharge", B: "Bouchon", E: "Événement", I: "Inspecteur", F: "Fantôme", D: "Détour", M: "Dépanneur" };
@@ -32,6 +32,7 @@ let occupe = false;        // une animation ou une requête est en cours
 let ordreMiniJeu = [];     // classement du mini-jeu en cours de saisie
 let bonusReveles = 0;
 let placesRevelees = 0;    // places du classement final déjà dévoilées, en partant de la dernière
+// une partie rechargée déjà tirée n'a pas à rejouer le suspense
 let derniereScene = null;  // ce que la scène affiche après une animation (dernière carte d'événement)
 
 const attendre = (ms) => new Promise((r) => setTimeout(r, MOUVEMENT_REDUIT ? Math.min(ms, 60) : ms));
@@ -136,7 +137,7 @@ function afficher() {
   const e = etat();
   $("#vue-config").hidden = !!e;
   $("#vue-jeu").hidden = !e || !["mini_jeu", "deplacement", "fin_tour"].includes(e.phase);
-  $("#vue-fin").hidden = !e || !["bonus", "repartition", "terminee"].includes(e.phase);
+  $("#vue-fin").hidden = !e || !["bonus", "terminee"].includes(e.phase);
   $("#meta").hidden = !e;
   $("#btn-nouvelle").hidden = !e;
   $("#btn-journal").hidden = !e;
@@ -194,6 +195,26 @@ function resumeConfig() {
   $("#config-resume").textContent =
     `${equipesConfig.length} équipes · ${fr(joueurs)} joueurs · ${cfg.partie.nb_tours} tours · plateau de ${cfg.plateau.length} arrêts`;
 }
+
+// ---- équipes au hasard
+const personnesSaisies = () => $("#hasard-personnes").value.split(/[\n,;]+/).map((p) => p.trim()).filter(Boolean);
+$("#hasard-personnes").addEventListener("input", () => {
+  const n = personnesSaisies().length;
+  $("#hasard-compte").textContent = `${fr(n)} participant${n > 1 ? "s" : ""}`;
+});
+$("#btn-hasard").addEventListener("click", async () => {
+  alerte("");
+  const nb = Number($("#hasard-nb").value) || 5;
+  try {
+    const r = await api("POST", "/api/equipes/aleatoires", { personnes: personnesSaisies(), nb_equipes: nb });
+    equipesConfig = r.equipes.map((joueurs, i) => ({
+      nom: (equipesConfig && equipesConfig[i] && equipesConfig[i].nom) || `Équipe ${i + 1}`,
+      joueurs: joueurs.join("\n"),
+    }));
+    afficherConfig();
+    $("#config-equipes").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { alerte(e.message); }
+});
 
 $("#btn-plus-equipe").addEventListener("click", () => {
   if (equipesConfig.length >= 8) return;
@@ -900,7 +921,7 @@ async function grandeFinale() {
     second.classList.add("arretee");
     vainqueur.querySelector("[data-rang]").innerHTML = "1<sup>er</sup>";
     second.querySelector("[data-rang]").innerHTML = "2<sup>e</sup>";
-    message.innerHTML = `<strong>${echapper(a.nom)}</strong> remporte STL Party et choisira en premier !`;
+    message.innerHTML = `<strong>${echapper(a.nom)}</strong> remporte STL Party : meilleures chances à la pige !`;
     SONS.tada();
     confettis();
   });
@@ -934,7 +955,7 @@ function afficherBonusEtClassement(zone) {
               <span class="pion pion-mystere" aria-hidden="true">?</span><span class="nom">???</span></li>`;
       }).join("")}</ol>
       <div class="actions" style="margin-top:16px">${tout
-        ? `<button class="btn btn-principal btn-geant" style="width:auto" data-action id="btn-repartition">Choisir les positions de l'échange</button>`
+        ? `<button class="btn btn-principal btn-geant" style="width:auto" data-action id="btn-pige">Tirer la pige des cadeaux</button>`
         : `<button class="btn btn-principal btn-geant" style="width:auto" id="btn-place">${finale ? "Grande finale : 1re et 2e places" : `Révéler la ${prochaineplace}e place`}</button>`}</div>
     </div>` : ""}`;
   if (!bonusFinis) {
@@ -957,7 +978,7 @@ function afficherBonusEtClassement(zone) {
       afficherFin();
     });
   } else {
-    $("#btn-repartition").addEventListener("click", () => agir("POST", "/api/repartition/commencer"));
+    $("#btn-pige").addEventListener("click", tirerPige);
   }
 }
 
@@ -967,43 +988,38 @@ function afficherFin() {
   const zone = $("#vue-fin");
   if (e.phase === "bonus") {
     afficherBonusEtClassement(zone);
-  } else if (e.phase === "repartition") {
-    const rep = e.repartition;
-    const id = rep.tours[rep.indice];
-    zone.innerHTML = `<div class="bloc">
-        <div class="bloc-tete"><div class="au-tour">${pion(id)} ${echapper(equipe(id).nom)} choisit une position</div>
-          <span class="note">Choix ${rep.indice + 1} sur ${rep.tours.length}</span></div>
-        <p class="info" style="margin-bottom:16px">Rappel : dans un échange où l'on peut voler, choisir <strong>en dernier</strong>
-          est souvent un avantage. Le premier ouvre un cadeau à l'aveugle !</p>
-        <div class="positions">${rep.positions.map((occupant, i) => occupant === null
-          ? `<button class="position" data-position="${i + 1}" data-action><b>${i + 1}</b><small>Libre</small></button>`
-          : `<button class="position prise" disabled><b>${i + 1}</b>${pion(occupant)}<small>${echapper(equipe(occupant).nom)}</small></button>`).join("")}</div>
-      </div>`;
-    zone.querySelectorAll("[data-position]").forEach((b) =>
-      b.addEventListener("click", () => agir("POST", "/api/repartition", { position: Number(b.dataset.position) })));
   } else if (e.phase === "terminee") {
-    const rep = e.repartition;
-    zone.innerHTML = `<div class="bloc">
-        <div class="bloc-tete"><h2>Ordre de l'échange</h2>
-          <button class="btn btn-secondaire btn-petit pas-imprimer" id="btn-imprimer">Imprimer</button></div>
-        <p class="note" style="margin-bottom:12px">Chaque équipe répartit elle-même ses positions entre ses membres.</p>
-        <ol class="ordre-final">${rep.positions.map((id, i) =>
-          `<li><span class="rang">${i + 1}</span>${pion(id)}<span>${echapper(equipe(id).nom)}</span></li>`).join("")}</ol>
+    // Écran public : la pige est faite, mais son détail reste sur la page privée de l'animateur.
+    const p = e.pige || {};
+    zone.innerHTML = `<div class="bloc pige-publique">
+        <div class="pige-illustration">${ILLUSTRATIONS.pige()}</div>
+        <div class="pige-texte">
+          <p class="surtitre">Échange de cadeaux</p>
+          <h2>La pige est faite !</h2>
+          <p class="pige-description">${fr(p.participants || 0)} participants ont été classés au hasard, avec plus de chances
+            pour les meilleures équipes. ${p.objets ? `Les ${fr(p.objets)} objets achetés ont été distribués en secret aux membres des équipes.` : ""}</p>
+          <p class="info">Le classement est <strong>privé</strong> : l'animateur l'ouvre sur son poste (pas sur l'écran projeté)
+            et appelle les participants dans l'ordre.</p>
+          <div class="actions" style="justify-content:flex-start">
+            <a class="btn btn-principal btn-geant" style="width:auto" href="/prive" target="_blank" rel="noopener">Ouvrir le classement privé</a>
+          </div>
+        </div>
       </div>
       <div class="bloc">
-        <div class="bloc-tete"><h2>Objets à utiliser pendant l'échange</h2><span class="note">Cocher un objet quand il est utilisé</span></div>
-        <div class="objets-equipes">${e.equipes.map((q) => `<div class="objets-equipe">
-          <h3>${pion(q.id)} ${echapper(q.nom)}</h3>
-          ${q.objets.length ? q.objets.map((o, k) => `<label class="objet-ligne${o.utilise ? " utilise" : ""}">
-            <input type="checkbox" data-equipe="${q.id}" data-indice="${k}" ${o.utilise ? "checked" : ""}>
-            <span class="objet-vignette">${imageObjet(objetCfg(o.id))}</span>
-            <span><strong>${echapper(objetCfg(o.id).nom)}</strong><small>${echapper(objetCfg(o.id).description)}</small></span></label>`).join("")
-            : `<p class="note">Aucun objet.</p>`}</div>`).join("")}</div>
+        <div class="bloc-tete"><h2>Classement final du jeu</h2><span class="note">Plus le rang est bon, plus les membres avaient de chances à la pige</span></div>
+        <ol class="podium">${partie.classement.map((id, i) => `<li class="revelee-fixe">${htmlPlace(i + 1, equipe(id))}</li>`).join("")}</ol>
       </div>`;
-    $("#btn-imprimer").addEventListener("click", () => window.print());
-    zone.querySelectorAll("[data-indice]").forEach((c) => c.addEventListener("change", () =>
-      agir("POST", "/api/objet", { equipe: Number(c.dataset.equipe), indice: Number(c.dataset.indice) })));
   }
+}
+
+/** Tirage de la pige : confirmation, roulement de tambour, puis le serveur tire et garde le résultat. */
+async function tirerPige() {
+  if (!(await confirmer("Tirer la pige des cadeaux ?",
+    "Le classement de tous les participants sera tiré au hasard, pondéré par le classement final, et les objets seront distribués aux joueurs. Le résultat ne s'affichera que sur la page privée de l'animateur."))) return;
+  SONS.tambour(1.6);
+  await attendre(1700);
+  await agir("POST", "/api/pige");
+  if (etat() && etat().phase === "terminee") { SONS.tada(); confettis(); }
 }
 
 demarrer();
