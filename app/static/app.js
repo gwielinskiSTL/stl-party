@@ -194,6 +194,7 @@ function majBoutons() {
 
 // ------------------------------------------------------------------------------ configuration
 let equipesConfig = null;
+let optionsConfig = null;   // nombre de tours, carte et objets choisis à l'écran de départ
 
 function afficherConfig() {
   if (!cfg) return;
@@ -214,16 +215,42 @@ function afficherConfig() {
   }));
   $("#config-mini-jeux").innerHTML = cfg.mini_jeux.map((m) =>
     `<li><strong>${echapper(m.nom)}</strong>${m.toute_equipe ? " · toute l'équipe" : ""}<br><span class="note">${echapper(m.description)}</span></li>`).join("");
-  $("#config-objets").innerHTML = cfg.objets.map((o) =>
-    `<li class="objet-liste"><span class="objet-vignette">${imageObjet(o)}</span>
-      <span><strong>${echapper(o.nom)}</strong> · ${fr(o.prix)} kWh<br><span class="note">${echapper(o.description)}</span></span></li>`).join("");
+  if (!optionsConfig) {
+    optionsConfig = { nb_tours: cfg.partie.nb_tours, carte: cfg.partie.carte || "classique", objets: new Set(cfg.objets.map((o) => o.id)) };
+  }
+  $("#config-tours").value = optionsConfig.nb_tours;
+  $("#config-cartes").innerHTML = cfg.cartes.map((c) => `
+    <button type="button" class="carte-choix" role="radio" aria-checked="${c.id === optionsConfig.carte}" data-carte="${c.id}">
+      ${apercuCarte(c)}<strong>${echapper(c.nom)}</strong><small>${echapper(c.description)}</small>
+      <span class="note">${c.noeuds.length} cases · ${c.noeuds.filter((n) => n.suivants.length > 1).length || "aucun"} embranchement${c.noeuds.filter((n) => n.suivants.length > 1).length > 1 ? "s" : ""}</span>
+    </button>`).join("");
+  $("#config-cartes").querySelectorAll("[data-carte]").forEach((b) => b.addEventListener("click", () => {
+    optionsConfig.carte = b.dataset.carte; afficherConfig();
+  }));
+  const groupe = (u, titre) => `<p class="groupe-objets">${titre}</p>` + cfg.objets.filter((o) => (o.usage || "echange") === u).map((o) => `
+    <label class="objet-liste objet-choix"><input type="checkbox" data-objet="${o.id}" ${optionsConfig.objets.has(o.id) ? "checked" : ""}>
+      <span class="objet-vignette">${imageObjet(o)}</span>
+      <span><strong>${echapper(o.nom)}</strong> · ${fr(o.prix)} kWh<br><span class="note">${echapper(o.description)}</span></span></label>`).join("");
+  $("#config-objets").innerHTML = groupe("jeu", "Sur le plateau, pendant la partie") + groupe("echange", "Pendant l'échange de cadeaux");
+  $("#config-objets").querySelectorAll("[data-objet]").forEach((c) => c.addEventListener("change", () => {
+    if (c.checked) optionsConfig.objets.add(c.dataset.objet); else optionsConfig.objets.delete(c.dataset.objet);
+    resumeConfig();
+  }));
   resumeConfig();
 }
 
+$("#config-tours").addEventListener("input", () => {
+  optionsConfig.nb_tours = Number($("#config-tours").value) || optionsConfig.nb_tours;
+  resumeConfig();
+});
+$("#objets-tous").addEventListener("click", () => { optionsConfig.objets = new Set(cfg.objets.map((o) => o.id)); afficherConfig(); });
+$("#objets-aucun").addEventListener("click", () => { optionsConfig.objets = new Set(); afficherConfig(); });
+
 function resumeConfig() {
   const joueurs = equipesConfig.reduce((s, e) => s + e.joueurs.split("\n").filter((j) => j.trim()).length, 0);
-  $("#config-resume").textContent =
-    `${equipesConfig.length} équipes · ${fr(joueurs)} joueurs · ${cfg.partie.nb_tours} tours · plateau de ${cfg.plateau.length} arrêts`;
+  const carte = cfg.cartes.find((c) => c.id === optionsConfig.carte) || cfg.cartes[0];
+  $("#config-resume").textContent = `${equipesConfig.length} équipes · ${fr(joueurs)} joueurs · ${optionsConfig.nb_tours} tours · ` +
+    `${carte.nom} · ${optionsConfig.objets.size} objet${optionsConfig.objets.size > 1 ? "s" : ""} au dépanneur`;
 }
 
 // ---- équipes au hasard
@@ -258,18 +285,52 @@ $("#btn-moins-equipe").addEventListener("click", () => {
 });
 $("#btn-commencer").addEventListener("click", async () => {
   const equipes = equipesConfig.map((e) => ({ nom: e.nom, joueurs: e.joueurs.split("\n") }));
+  const options = { nb_tours: optionsConfig.nb_tours, carte: optionsConfig.carte,
+    objets: cfg.objets.map((o) => o.id).filter((id) => optionsConfig.objets.has(id)) };
   ordreMiniJeu = [];
   bonusReveles = 0;
   placesRevelees = 0;
   derniereScene = null;
-  await agir("POST", "/api/partie", { equipes });
+  await agir("POST", "/api/partie", { equipes, ...options });
   synchroniserPositions();
   afficher();
 });
 
 // ------------------------------------------------------------------------------ plateau
+/** Cases de la carte en cours (parties enregistrées avant les cartes : boucle rectangulaire). */
+function noeudsDe(e) {
+  if (e.carte) return e.carte.noeuds;
+  return boucleRectangle(e.plateau.length).map(([x, y], i) =>
+    ({ x, y, type: e.plateau[i], suivants: [(i + 1) % e.plateau.length] }));
+}
+
 function geometrie() {
-  const n = etat().plateau.length;
+  return noeudsDe(etat()).map((n) => [n.x, n.y]);
+}
+
+/** Routes (traits entre cases) et petites flèches aux embranchements. */
+function svgRoutes(noeuds, fleches = true) {
+  const d = noeuds.flatMap((n, i) => n.suivants.map((k) => `M${n.x} ${n.y}L${noeuds[k].x} ${noeuds[k].y}`)).join("");
+  const chevrons = !fleches ? "" : noeuds.flatMap((n) => n.suivants.length < 2 ? [] : n.suivants.map((k) => {
+    const m = noeuds[k];
+    const angle = Math.atan2(m.y - n.y, m.x - n.x) * 180 / Math.PI;
+    return `<g class="fleche-route" transform="translate(${(n.x + (m.x - n.x) * 0.55).toFixed(1)} ${(n.y + (m.y - n.y) * 0.55).toFixed(1)}) rotate(${angle.toFixed(0)})">
+      <path d="M-6 -9 L6 0 L-6 9"></path></g>`;
+  })).join("");
+  return `<path class="route" d="${d}"></path><path class="route-pointillee" d="${d}"></path>${chevrons}`;
+}
+
+/** Petit aperçu d'une carte (écran de départ). */
+function apercuCarte(carte) {
+  const n = carte.noeuds;
+  return `<svg viewBox="0 0 1000 620" class="apercu-carte" role="img" aria-label="Aperçu de la carte ${echapper(carte.nom)}">
+    ${svgRoutes(n, false)}
+    ${n.map((c) => `<g class="case c-${c.type}" transform="translate(${c.x},${c.y})"><rect x="-32" y="-32" width="64" height="64"></rect></g>`).join("")}
+    ${n.map((c, i) => c.suivants.length > 1 ? `<circle class="apercu-embranchement" cx="${c.x}" cy="${c.y}" r="44"></circle>` : "").join("")}
+  </svg>`;
+}
+
+function boucleRectangle(n) {
   const x0 = 50, y0 = 50, x1 = 950, y1 = 570;
   const l = x1 - x0, h = y1 - y0, per = 2 * (l + h);
   return Array.from({ length: n }, (_, i) => {
@@ -301,13 +362,23 @@ function dessinerPlateau() {
     const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r2 : R;
     return `${(cx + rr * Math.cos(a)).toFixed(1)},${(cy + rr * Math.sin(a)).toFixed(1)}`;
   }).join(" ");
-  const route = pts.map(([x, y]) => `${x},${y}`).join(" ");
+  const noeuds = noeudsDe(e);
+  const scene = (e.carte && e.carte.scene) || { gauche: 14, droite: 14, haut: 20, bas: 20 };
+  Object.assign($("#scene").style, { left: `${scene.gauche}%`, right: `${scene.droite}%`, top: `${scene.haut}%`, bottom: `${scene.bas}%` });
+  $("#plateau").classList.toggle("scene-etroite", 100 - scene.gauche - scene.droite < 50);
+  const cones = (e.pieges || []).map((p) => {
+    const [x, y] = pts[p.case];
+    return `<g class="cone" transform="translate(${x - 30},${y + 26}) scale(.75)"><title>Cône de chantier de ${echapper(equipe(p.equipe).nom)} : −${p.valeur} kWh</title>
+      <path d="M-12 12 L-4 -16 H4 L12 12 Z"></path><path class="bande" d="M-8.2 -1 H8.2 L9.6 5 H-9.6 Z"></path>
+      <rect x="-15" y="11" width="30" height="5"></rect><circle class="pastille-eq eq-${p.equipe % 8}" cx="13" cy="-12" r="9"></circle>
+      <text x="13" y="-12">${p.equipe + 1}</text></g>`;
+  }).join("");
   $("#plateau-svg").innerHTML = `
     <defs><pattern id="hachures" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="8" height="8" fill="#f3f3f3"></rect><rect width="3" height="8" fill="#d9d9d9"></rect></pattern></defs>
-    <polygon class="route" points="${route}"></polygon>
-    <polygon class="route-pointillee" points="${route}"></polygon>
+    ${svgRoutes(noeuds)}
     ${cases}
+    ${cones}
     <g class="billet" transform="translate(${bx + 26},${by - 26})"><title>Billet d'or : ${fr(e.reglages.partie.prix_billet)} kWh</title>
       <circle class="halo" r="20"></circle>
       <polygon points="${etoile(0, 0, 20, 9)}"></polygon><circle r="5"></circle></g>
@@ -357,7 +428,7 @@ function afficherScene() {
       <div class="scene-joueurs">${e.equipes.map((q) => `<span>${pion(q.id)}${echapper(m.joueurs[q.id])}</span>`).join("")}</div>`;
   } else if (e.phase === "deplacement") {
     const q = equipe(e.courant);
-    const nb = e.des[String(q.id)] || 1;
+    const nb = (partie.nb_des && partie.nb_des[q.id]) || e.des[String(q.id)] || 1;
     scene.innerHTML = `${derniereScene || ""}
       <div class="scene-surtitre">Tour ${e.tour} sur ${e.nb_tours}</div>
       <div class="scene-titre">${pion(q.id)} Au tour de ${echapper(q.nom)}</div>
@@ -391,6 +462,10 @@ const GARDES = {
   fantome_resultat: ["Fantôme du garage", "envoie le fantôme"],
   detour: ["Case Détour", "échangent"],
   dernier_arret: ["Dernier tour", "reçoit un coup de pouce"],
+  objet_de: ["Objet utilisé", "utilise un objet"],
+  objet_piege: ["Objet utilisé", "pose un cône de chantier"],
+  objet_feu: ["Objet utilisé", "allume un feu rouge"],
+  piege: ["Chantier", "tombe dans un piège"],
 };
 
 /** Page de garde plein écran : grande illustration, attend « Continuer » (ou Entrée). */
@@ -402,8 +477,9 @@ async function montrerGrandEcran(ev, origine) {
     $("#geant-surtitre").textContent = ev.surtitre || surtitre;
     $("#geant-titre").textContent = ev.titre;
     $("#geant-description").textContent = ev.texte;
-    if (ev.code === "detour" && ev.equipes) {
-      $("#geant-equipe").innerHTML = ev.equipes.map((id) => `${pion(id, "pion pion-grand")} <span>${echapper(equipe(id).nom)}</span>`).join(" <span>⇄</span> ");
+    if (ev.equipes && ["detour", "piege", "objet_feu"].includes(ev.code)) {
+      $("#geant-equipe").innerHTML = ev.equipes.map((id) => `${pion(id, "pion pion-grand")} <span>${echapper(equipe(id).nom)}</span>`)
+        .join(ev.code === "detour" ? " <span>⇄</span> " : " <span>→</span> ");
     } else if (ev.equipe !== undefined) {
       $("#geant-equipe").innerHTML = `${pion(ev.equipe, "pion pion-grand")} <span>${echapper(equipe(ev.equipe).nom)} ${echapper(ev.phrase_equipe || phrase)}</span>`;
     } else {
@@ -498,7 +574,7 @@ async function annoncer(anim, etape) {
 
 async function rejouer(anim, nouvelle) {
   const ancienne = partie;
-  if (!anim || !ancienne || !ancienne.etat || !nouvelle.etat || !["deplacement", "tour", "mini_jeu"].includes(anim.type)) {
+  if (!anim || !ancienne || !ancienne.etat || !nouvelle.etat || !["deplacement", "tour", "mini_jeu", "objet"].includes(anim.type)) {
     partie = nouvelle;
     synchroniserPositions();
     return;
@@ -554,7 +630,7 @@ function afficherEquipes() {
   $("#equipes").innerHTML = partie.classement.map((id, rang) => {
     const q = equipe(id);
     const objets = q.objets.map((o) => objetCfg(o.id).nom).join(", ");
-    const nbDes = e.des[String(id)];
+    const nbDes = e.des[String(id)] ? (partie.nb_des ? partie.nb_des[id] : e.des[String(id)]) : null;
     const actif = e.phase === "deplacement" && e.courant === id;
     return `<li class="equipe${actif ? " actif" : ""}" data-id="${id}" tabindex="0" role="button" aria-label="Corriger ${echapper(q.nom)}">
       <span class="equipe-rang">${rang + 1}</span>${pion(id)}
@@ -602,15 +678,21 @@ function afficherAction() {
     $("#btn-valider").addEventListener("click", () => agir("POST", "/api/mini-jeu", { ordre: ordreMiniJeu }));
   } else if (e.phase === "deplacement") {
     const q = equipe(e.courant);
-    const nb = e.des[String(q.id)] || 1;
+    const nb = (partie.nb_des && partie.nb_des[q.id]) || e.des[String(q.id)] || 1;
     const restent = e.file.slice(e.file.indexOf(e.courant) + 1).map((id) => echapper(equipe(id).nom)).join(", ");
     zone.innerHTML = `<div class="au-tour">${pion(q.id)} ${echapper(q.nom)}</div>
       ${e.attente
         ? `<button class="btn btn-principal btn-geant" data-action id="btn-decision">Décision en attente…</button>`
         : `<button class="btn btn-principal btn-geant" data-action id="btn-lancer">Lancer ${nb} dé${nb > 1 ? "s" : ""}</button>`}
+      ${!e.attente && objetsDeJeu(q).length ? `<div class="objets-jeu">
+        <p class="note">Avant de lancer, ${echapper(q.nom)} peut utiliser :</p>
+        ${objetsDeJeu(q).map(({ o, k }) => `<button class="btn btn-secondaire objet-jeu" data-action data-indice="${k}">
+          <span class="objet-vignette">${imageObjet(o)}</span><span><strong>${echapper(o.nom)}</strong><small>${echapper(o.description)}</small></span></button>`).join("")}
+      </div>` : ""}
       <p class="note">${restent ? `Ensuite : ${restent}` : "Dernière équipe du tour."}</p>`;
     if (e.attente) $("#btn-decision").addEventListener("click", ouvrirDecision);
     else $("#btn-lancer").addEventListener("click", () => agir("POST", "/api/lancer"));
+    zone.querySelectorAll(".objet-jeu").forEach((b) => b.addEventListener("click", () => utiliserObjet(q, Number(b.dataset.indice))));
   } else if (e.phase === "fin_tour") {
     const dernier = e.tour >= e.nb_tours;
     zone.innerHTML = `<button class="btn btn-principal btn-geant" data-action id="btn-suivant">${dernier ? "Voir les bonus" : `Passer au tour ${e.tour + 1}`}</button>
@@ -619,7 +701,29 @@ function afficherAction() {
   }
 }
 
-// ------------------------------------------------------------------------------ décisions (Billet d'or, Dépanneur, Fantôme)
+// ------------------------------------------------------------------------------ objets de jeu
+const objetsDeJeu = (q) => q.objets.map((x, k) => ({ o: objetCfg(x.id), k })).filter(({ o }) => o.usage === "jeu");
+
+async function utiliserObjet(q, indice) {
+  const o = objetCfg(q.objets[indice].id);
+  let cible = null;
+  if (o.effet === "de_moins") {
+    cible = await choisirEquipe(`${o.nom} : quelle équipe ?`, o.description, q.id);
+    if (cible === null) return;
+  }
+  await agir("POST", "/api/utiliser", { indice, cible });
+}
+
+/** Petite fenêtre pour choisir une autre équipe. Renvoie son id, ou null si on ferme. */
+function choisirEquipe(titre, texte, exclue) {
+  $("#cible-titre").textContent = titre;
+  $("#cible-texte").textContent = texte;
+  $("#cible-equipes").innerHTML = etat().equipes.filter((x) => x.id !== exclue).map((x) =>
+    `<button class="btn btn-secondaire" value="${x.id}">${pion(x.id)} ${echapper(x.nom)} · ${fr(x.kwh)} kWh</button>`).join("");
+  return ouvrirDialogue("#dlg-cible").then((v) => (v === "" || v === "annuler" ? null : Number(v)));
+}
+
+// ------------------------------------------------------------------------------ décisions (embranchement, Billet d'or, Dépanneur, Fantôme)
 function ouvrirDialogue(id) {
   return new Promise((resoudre) => {
     const d = $(id);
@@ -630,6 +734,36 @@ function ouvrirDialogue(id) {
 }
 
 let decisionOuverte = false;
+
+/** Embranchement : la fenêtre laisse voir le plateau ; les premières cases de chaque route clignotent. */
+async function choisirRoute(q, att) {
+  $("#route-titre").innerHTML = `${pion(q.id)} ${echapper(q.nom)} arrive à un embranchement`;
+  $("#route-texte").textContent = `Encore ${att.reste} arrêt${att.reste > 1 ? "s" : ""} à faire. Quelle route ?`;
+  const ordre = { "à gauche": 0, "tout droit": 1, "à droite": 2 };
+  const options = [...att.options].sort((a, b) => (ordre[a.sens] ?? 1) - (ordre[b.sens] ?? 1));
+  $("#route-options").innerHTML = options.map((o) => `<button class="route-option" value="${o.vers}" data-vers="${o.vers}">
+      <span class="route-sens">${o.sens === "à gauche" ? "←" : o.sens === "à droite" ? "→" : "↑"} ${echapper(capitale(o.sens || "Route"))}</span>
+      ${o.nom ? `<strong>${echapper(o.nom)}</strong>` : ""}
+      <span class="route-apercu">${o.apercu.map((t) => `<span class="mini-case c-${t}" title="${LIBELLES[t]}">${t === "F" ? "◐" : SYMBOLES[t]}</span>`).join("")}</span>
+      <small>${o.apercu.map((t) => LIBELLES[t]).join(" · ")}</small></button>`).join("");
+  const marquer = (vers, actif) => {
+    let i = vers;
+    for (let k = 0; k < 5 && i !== undefined; k++) {
+      document.querySelector(`#plateau-svg .case[data-i="${i}"]`)?.classList.toggle("route-visee", actif);
+      i = noeudsDe(etat())[i].suivants[0];
+    }
+  };
+  options.forEach((o) => marquer(o.vers, true));
+  document.querySelectorAll("#route-options .route-option").forEach((b) => {
+    b.addEventListener("mouseenter", () => { options.forEach((o) => marquer(o.vers, false)); marquer(Number(b.dataset.vers), true); });
+    b.addEventListener("mouseleave", () => options.forEach((o) => marquer(o.vers, true)));
+  });
+  SONS.tic(0.8);
+  const choix = await ouvrirDialogue("#dlg-route");
+  options.forEach((o) => marquer(o.vers, false));
+  return choix && choix !== "annuler" ? { vers: Number(choix) } : null;
+}
+const capitale = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 let gardeDepanneur = null;   // arrêt (dépanneur ou Billet d'or) dont la page de garde a déjà été montrée
 async function ouvrirDecision() {
   const att = etat() && etat().attente;
@@ -638,7 +772,9 @@ async function ouvrirDecision() {
   let decision = null;
   try {
     const q = equipe(att.equipe);
-    if (att.type === "billet") {
+    if (att.type === "embranchement") {
+      decision = await choisirRoute(q, att);
+    } else if (att.type === "billet") {
       const cle = `billet-${etat().tour}-${q.id}-${q.position}-${att.reste}`;
       if (gardeDepanneur !== cle) {
         gardeDepanneur = cle;
@@ -686,6 +822,7 @@ async function ouvrirDecision() {
         return `<button type="button" class="objet-carte" role="radio" aria-checked="false" data-id="${o.id}" ${manque > 0 ? "disabled" : ""}>
           <span class="objet-image">${imageObjet(o)}</span>
           <span class="objet-entete"><strong>${echapper(o.nom)}</strong><span class="prix">${fr(o.prix)} kWh</span></span>
+          <span class="etiquette-usage ${o.usage === "jeu" ? "jeu" : ""}">${o.usage === "jeu" ? "Sur le plateau" : "Pendant l'échange"}</span>
           <span class="objet-description">${echapper(o.description)}</span>
           ${o.explication ? `<span class="objet-exemple">${echapper(o.explication)}</span>` : ""}
           <span class="objet-etat">${manque > 0 ? `Il manque ${fr(manque)} kWh` : possede ? `Déjà ${possede} dans le sac` : "Disponible"}</span>

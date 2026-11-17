@@ -38,6 +38,9 @@ Le logo officiel se dépose dans `app/static/logo-stl.svg` (masqué s'il est abs
    (ou avec `code_prive`), avec export CSV, impression et estimation des chances par simulation.
 
 Les équipes peuvent être formées **au hasard** : coller la liste des participants à l'écran de départ.
+On y choisit aussi le **nombre de tours**, la **carte** (« La boucle », « Express ou local » avec un embranchement,
+« Le grand réseau » avec deux) et les **objets** offerts au dépanneur : objets « sur le plateau » (Dé supplémentaire,
+Cône de chantier qui laisse un piège, Feu rouge) utilisables avant un lancer, et objets « pendant l'échange ».
 
 **Suivi sur cellulaire** : bouton « Suivi cellulaire » de l'en-tête → code QR vers `/suivre` (lecture seule :
 points par équipe, inventaire des objets, ordre de pige une fois publié depuis la page privée). Les cellulaires
@@ -58,6 +61,7 @@ stl-party/
 ├── app/
 │   ├── main.py          ← FastAPI : /api/..., enregistrement, annulation ; erreurs toujours en JSON
 │   ├── jeu.py           ← toutes les règles (état = dictionnaire JSON)
+│   ├── cartes.py        ← cartes : cases, coordonnées, embranchements (gauche / droite / tout droit)
 │   ├── config.py        ← lecture et validation de STL_PARTY.toml
 │   └── static/          ← index.html, app.js (affichage + animations), illustrations.js (dessins SVG), sons.js,
 │                          prive.html + prive.js (classement privé de la pige),
@@ -85,6 +89,7 @@ stl-party/
 | `POST /api/mini-jeu` | `{"ordre": [id, ...]}` du premier au dernier |
 | `POST /api/lancer` | lance les dés de l'équipe courante |
 | `POST /api/decision` | `{"acheter": bool}` · `{"objet": id \| null}` · `{"cible": id, "quoi": "kwh" \| "billet"}` |
+| `POST /api/utiliser` | `{"indice": k, "cible": id}` : l'équipe courante utilise un objet de jeu avant de lancer |
 | `POST /api/tour-suivant` | tour suivant, ou bonus après le dernier |
 | `POST /api/equipes/aleatoires` | `{"personnes": [...], "nb_equipes": 5}` → équipes équilibrées au hasard |
 | `POST /api/pige` | tire la pige privée (après les bonus) ; la vue publique n'en montre que le résumé |

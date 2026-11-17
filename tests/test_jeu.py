@@ -21,7 +21,17 @@ def jouer_jusqu_a_la_fin(etat, graine=0):
         elif phase == "deplacement":
             att = etat["attente"]
             if not att:
+                eq = etat["equipes"][etat["courant"]]
+                jeux = [k for k, o in enumerate(eq["objets"]) if jeu.usage(jeu._objet(etat, o["id"])) == "jeu"]
+                if jeux and h.random() < .5:
+                    autre = h.choice([e["id"] for e in etat["equipes"] if e["id"] != eq["id"]])
+                    try:
+                        jeu.utiliser_objet(etat, jeux[0], autre)
+                    except jeu.ErreurJeu as err:          # chantier refusé (Terminus, cône déjà là)
+                        assert "chantier" in str(err).lower()
                 jeu.lancer(etat)
+            elif att["type"] == "embranchement":
+                jeu.decider(etat, {"vers": h.choice(att["options"])["vers"]})
             elif att["type"] == "billet":
                 jeu.decider(etat, {"acheter": h.random() < .8})
             elif att["type"] == "boutique":
@@ -174,7 +184,8 @@ def test_dernier_tour_aide_la_derniere_equipe(cfg, equipes):
 @pytest.mark.parametrize("graine", range(30))
 def test_parties_completes(cfg, equipes, graine):
     jeu.hasard.seed(graine)
-    etat = jeu.nouvelle_partie(cfg, equipes)
+    carte = ["classique", "express", "grand_reseau"][graine % 3]
+    etat = jeu.nouvelle_partie(cfg, equipes, {"carte": carte})
     jouer_jusqu_a_la_fin(etat, graine)
     lignes = etat["pige"]["lignes"]
     assert [l["ordre"] for l in lignes] == list(range(1, 26))
@@ -183,8 +194,9 @@ def test_parties_completes(cfg, equipes, graine):
     assert len(etat["bonus"]) == 3
     for a in etat["pige"]["objets"]:                       # chaque objet va à un membre de son équipe
         assert a["joueur"] in etat["equipes"][a["equipe"]]["joueurs"]
-    for e in etat["equipes"]:
-        assert sorted(a["indice"] for a in etat["pige"]["objets"] if a["equipe"] == e["id"]) == list(range(len(e["objets"])))
+    for e in etat["equipes"]:                              # seuls les objets d'échange sont distribués
+        echange = [k for k, o in enumerate(e["objets"]) if jeu.usage(jeu._objet(etat, o["id"])) == "echange"]
+        assert sorted(a["indice"] for a in etat["pige"]["objets"] if a["equipe"] == e["id"]) == echange
 
 
 def test_case_evenement_annoncee_en_grand(cfg, equipes):
@@ -239,7 +251,7 @@ def test_chaque_evenement_a_un_code(cfg, equipes, graine):
 
 
 def test_evenements_dates_sur_le_trajet(cfg, equipes):
-    """Un achat en route est annoncé tout de suite (étape 0), le passage au Terminus à sa case, l'arrivée à la fin."""
+    """Un achat en route n'a pas de page de garde ; l'arrivée est annoncée à la fin du trajet."""
     etat = jeu.nouvelle_partie(cfg, equipes)
     etat["plateau"] = ["T", "M"] + ["R"] * 30
     etat["position_billet"] = 20
@@ -250,8 +262,8 @@ def test_evenements_dates_sur_le_trajet(cfg, equipes):
     assert etat["attente"]["type"] == "boutique"
     reste = etat["attente"]["reste"]
     anim = jeu.decider(etat, {"objet": "retard"})
-    achat = anim["evenements"][0]
-    assert achat["code"] == "achat" and achat["etape"] == 0
+    assert not any(ev["code"] == "achat" for ev in anim["evenements"])     # pas de page de garde après un achat
+    assert etat["equipes"][0]["objets"] == [{"id": "retard", "utilise": False}]
     arrivee = anim["evenements"][-1]
     assert arrivee["code"] == "recharge" and arrivee["etape"] == len(anim["chemin"]) == reste
 
@@ -327,3 +339,114 @@ def test_avantage_dernier_inverse_l_ordre(cfg, equipes):
 def test_pige_seulement_apres_les_bonus(cfg, equipes):
     with pytest.raises(jeu.ErreurJeu):
         jeu.tirer_pige(jeu.nouvelle_partie(cfg, equipes))
+
+
+
+# ------------------------------------------------------------------------------ options de partie
+def test_options_de_partie(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes, {"nb_tours": 3, "carte": "express", "objets": ["gel", "chantier"]})
+    assert etat["nb_tours"] == 3 and etat["carte"]["id"] == "express"
+    assert [o["id"] for o in etat["reglages"]["objets"]] == ["gel", "chantier"]
+    assert len(etat["plateau"]) == len(etat["carte"]["noeuds"]) and etat["plateau"][0] == "T"
+    for mauvais, message in [({"nb_tours": 0}, "entre 1 et 20"), ({"carte": "lune"}, "Carte inconnue"),
+                             ({"objets": ["licorne"]}, "Objet inconnu")]:
+        with pytest.raises(jeu.ErreurJeu, match=message):
+            jeu.nouvelle_partie(cfg, equipes, mauvais)
+
+
+def test_sans_objets_le_depanneur_ne_s_ouvre_pas(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes, {"objets": []})
+    assert not jeu.peut_magasiner(etat, etat["equipes"][0])
+
+
+# ------------------------------------------------------------------------------ embranchements
+def test_embranchement_gauche_ou_droite(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes, {"carte": "express"})
+    etat["position_billet"] = 14
+    jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+    eq = etat["equipes"][0]
+    eq["position"], eq["trace"] = 1, [0, 1]
+    jeu.hasard.seed(4)
+    anim = jeu.lancer(etat)
+    att = etat["attente"]
+    assert att["type"] == "embranchement" and att["case"] == 3 and anim["chemin"] == [2, 3]
+    assert {o["sens"] for o in att["options"]} == {"tout droit", "à droite"}
+    express = next(o for o in att["options"] if o["nom"] == "Express")
+    with pytest.raises(jeu.ErreurJeu, match="route"):
+        jeu.decider(etat, {"vers": 10})
+    anim = jeu.decider(etat, {"vers": express["vers"]})
+    assert anim["chemin"][0] == express["vers"]                      # il a bien pris l'express
+    assert all(i >= 28 or i in (20, 21, 22) for i in anim["chemin"][:len(anim["chemin"])])
+
+
+def test_arret_pile_sur_l_embranchement_choisit_au_tour_suivant(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes, {"carte": "express"})
+    jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+    eq = etat["equipes"][0]
+    eq["position"] = 3                                               # déjà sur l'embranchement
+    anim = jeu.lancer(etat)
+    assert anim["chemin"] == [] and etat["attente"]["type"] == "embranchement" and len(anim["des"]) == 3
+
+
+def test_correspondance_ratee_suit_la_trace(cfg, equipes):
+    etat = jeu.nouvelle_partie(cfg, equipes, {"carte": "express"})
+    eq = etat["equipes"][0]
+    eq["position"], eq["trace"] = 21, [0, 1, 2, 3, 28, 29, 30, 31, 20, 21]
+    jeu.hasard.randrange = lambda n: 3                               # force « Correspondance ratée »
+    try:
+        ev = jeu._evenement(etat, eq)
+    finally:
+        del jeu.hasard.randrange
+    assert ev["code"] == "correspondance_ratee" and eq["position"] == 30       # recule par l'express emprunté
+
+
+# ------------------------------------------------------------------------------ objets de jeu
+def _au_tour_de_0(cfg, equipes, objets):
+    etat = jeu.nouvelle_partie(cfg, equipes)
+    etat["plateau"] = ["T"] + ["R"] * 31
+    etat["position_billet"] = 20
+    jeu.resultat_mini_jeu(etat, [0, 1, 2, 3, 4])
+    etat["equipes"][0]["objets"] = [{"id": i, "utilise": False} for i in objets]
+    return etat
+
+
+def test_de_supplementaire(cfg, equipes):
+    etat = _au_tour_de_0(cfg, equipes, ["de_supplementaire", "gel"])
+    anim = jeu.utiliser_objet(etat, 0)
+    assert anim["evenements"][0]["code"] == "objet_de" and jeu.nb_des(etat, 0) == 4
+    assert [o["id"] for o in etat["equipes"][0]["objets"]] == ["gel"]
+    with pytest.raises(jeu.ErreurJeu, match="pendant l'échange"):
+        jeu.utiliser_objet(etat, 0)
+    assert len(jeu.lancer(etat)["des"]) == 4 and etat["modif_des"] == {}
+
+
+def test_feu_rouge(cfg, equipes):
+    etat = _au_tour_de_0(cfg, equipes, ["feu_rouge"])
+    with pytest.raises(jeu.ErreurJeu, match="autre équipe"):
+        jeu.utiliser_objet(etat, 0, 0)
+    jeu.utiliser_objet(etat, 0, 4)
+    assert jeu.nb_des(etat, 4) == 1                                  # 2 dés − 1
+    etat["modif_des"]["4"] = -5
+    assert jeu.nb_des(etat, 4) == 1                                  # jamais moins d'un dé
+
+
+def test_cone_de_chantier(cfg, equipes):
+    etat = _au_tour_de_0(cfg, equipes, ["chantier", "chantier"])
+    etat["equipes"][0]["position"] = 5
+    jeu.utiliser_objet(etat, 0)
+    assert etat["pieges"] == [{"case": 5, "equipe": 0, "valeur": 10}]
+    with pytest.raises(jeu.ErreurJeu, match="déjà un cône"):
+        jeu.utiliser_objet(etat, 0)
+    poseur, victime = etat["equipes"][0], etat["equipes"][1]
+    kwh_poseur, kwh_victime = poseur["kwh"], victime["kwh"]
+    victime["position"] = 5
+    anim = {"evenements": []}
+    jeu._atterrir(etat, victime, anim)
+    assert anim["evenements"][0]["code"] == "piege" and etat["pieges"] == []
+    assert poseur["kwh"] == kwh_poseur + 10 and victime["kwh"] == kwh_victime - 10 + 3    # puis la Recharge
+    # le poseur ne tombe pas dans son propre piège
+    etat["pieges"] = [{"case": 7, "equipe": 0, "valeur": 10}]
+    poseur["position"] = 7
+    anim = {"evenements": []}
+    jeu._atterrir(etat, poseur, anim)
+    assert etat["pieges"] and anim["evenements"][0]["code"] == "recharge"

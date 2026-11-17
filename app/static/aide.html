@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Règles — STL Party</title>
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-17b">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17c">
   <style>
     .aide { max-width: 980px; }
     .aide h2 { font-size: 18px; margin-bottom: 10px; }
@@ -52,7 +52,11 @@
         <dt>Inspecteur</dt><dd>Contravention : l'équipe perd la moitié de ses kWh.</dd>
         <dt>Fantôme</dt><dd>Vole des kWh à l'équipe de votre choix, ou un Billet d'or contre 30 kWh.</dd>
         <dt>Détour</dt><dd>Deux équipes au hasard échangent leurs kWh, leurs Billets ou leurs places.</dd>
-        <dt>Dépanneur</dt><dd>En passant, on peut acheter un objet (3 au maximum par équipe).</dd>
+        <dt>Dépanneur</dt><dd>En passant, on peut acheter un objet (3 au maximum par équipe). Objets « sur le plateau » :
+          Dé supplémentaire, Cône de chantier (piège : la prochaine équipe adverse qui s'arrête dessus vous donne 10 kWh),
+          Feu rouge (une autre équipe lance un dé de moins). Ils s'utilisent avant de lancer les dés.</dd>
+        <dt>Embranchement</dt><dd>Sur certaines cartes, la route se divise : l'équipe choisit d'aller tout droit, à gauche
+          ou à droite, en voyant les prochains arrêts de chaque route.</dd>
         <dt>Billet d'or ★</dt><dd>En passant dessus, on peut l'acheter pour 20 kWh. Il change ensuite de place.</dd>
       </dl>
     </section>
@@ -76,7 +80,8 @@
         <li>Cliquer une équipe dans le classement permet de corriger ses kWh ou ses Billets.</li>
         <li>Une fenêtre fermée par erreur (Échap) se rouvre avec <strong>Décision en attente…</strong>.</li>
         <li>La partie est enregistrée à chaque action : on peut recharger la page sans rien perdre.</li>
-        <li>Mini-jeux, prix, nombre de dés, plateau et poids de la pige se modifient dans <code>STL_PARTY.toml</code> (avant la partie).</li>
+        <li>À l'écran de départ : nombre de tours, carte et objets offerts au dépanneur.</li>
+        <li>Mini-jeux, prix, nombre de dés, cases de « La boucle » et poids de la pige se modifient dans <code>STL_PARTY.toml</code> (avant la partie).</li>
         <li>Pas encore d'équipes ? Collez la liste des participants dans « Équipes au hasard » à l'écran de départ.</li>
       </ul>
     </section>

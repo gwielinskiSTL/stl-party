@@ -23,7 +23,7 @@ from fastapi import Body, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import config, jeu
+from . import cartes, config, jeu
 
 STATIQUE = Path(__file__).resolve().parent / "static"
 MAX_HISTORIQUE = 50
@@ -95,6 +95,7 @@ def _vue(etat: dict | None) -> dict:
         "classement": [e["id"] for e in jeu.classement(etat)],
         "mini_jeu": jeu.mini_jeu_du_tour(etat) if etat["phase"] in ("mini_jeu", "deplacement", "fin_tour") else None,
         "peut_magasiner": {e["id"]: jeu.peut_magasiner(etat, e) for e in etat["equipes"]},
+        "nb_des": {e["id"]: jeu.nb_des(etat, e["id"]) for e in etat["equipes"]},
     }
 
 
@@ -123,6 +124,7 @@ def sante():
 def configuration():
     cfg = config.lire()
     return {"partie": cfg["partie"], "cases": cfg["cases"], "plateau": cfg["plateau"]["liste"],
+            "cartes": cartes.toutes(cfg["plateau"]["liste"]),
             "mode_noel": bool(cfg["application"].get("mode_noel", False)),
             "animations": str(cfg["application"].get("animations", "toujours")),
             "mini_jeux": cfg["mini_jeux"], "objets": cfg["objets"], "noms_cases": jeu.NOMS_CASES}
@@ -139,7 +141,8 @@ def nouvelle(corps: dict = Body(...)):
         ancienne = _charger()
         if ancienne is not None:
             _archiver(ancienne)
-        etat = jeu.nouvelle_partie(config.lire(), corps.get("equipes") or [])
+        options = {k: corps[k] for k in ("nb_tours", "carte", "objets") if k in corps}
+        etat = jeu.nouvelle_partie(config.lire(), corps.get("equipes") or [], options)
         _ecrire_json("historique.json", [])
         _ecrire_json("partie.json", etat)
         return {"partie": _vue(etat), "animation": {"type": "nouvelle", "evenements": []}}
@@ -176,6 +179,11 @@ def lancer():
 @app.post("/api/decision")
 def decision(corps: dict = Body(...)):
     return _agir(jeu.decider, corps)
+
+
+@app.post("/api/utiliser")
+def utiliser(corps: dict = Body(...)):
+    return _agir(jeu.utiliser_objet, corps.get("indice"), corps.get("cible"))
 
 
 @app.post("/api/tour-suivant")

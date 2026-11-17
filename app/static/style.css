@@ -130,8 +130,26 @@ p { margin: 0; }
 .plateau-bloc { padding: 12px; }
 .plateau { position: relative; width: 100%; aspect-ratio: 1000 / 620; }
 .plateau svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.route { fill: none; stroke: var(--bordure); stroke-width: 22; stroke-linejoin: round; }
+.route { fill: none; stroke: var(--bordure); stroke-width: 22; stroke-linejoin: round; stroke-linecap: round; }
 .route-pointillee { fill: none; stroke: var(--blanc); stroke-width: 3; stroke-dasharray: 10 12; }
+.fleche-route path { fill: none; stroke: var(--marine); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+/* Cône de chantier posé sur une case */
+.cone path { fill: var(--marine); stroke: var(--blanc); stroke-width: 2; stroke-linejoin: round; }
+.cone .bande { fill: var(--blanc); stroke: none; }
+.cone rect { fill: var(--marine); }
+.cone .pastille-eq { stroke: var(--marine); stroke-width: 2; }
+.cone .pastille-eq.eq-0 { fill: var(--marine); } .cone .pastille-eq.eq-1 { fill: var(--cyan); } .cone .pastille-eq.eq-2 { fill: var(--vert); }
+.cone .pastille-eq.eq-3 { fill: var(--marine-doux); } .cone .pastille-eq.eq-4 { fill: var(--cyan-doux); } .cone .pastille-eq.eq-5 { fill: var(--blanc); }
+.cone .pastille-eq.eq-6 { fill: var(--gris); } .cone .pastille-eq.eq-7 { fill: var(--bleu-pale); }
+.cone text { font-family: var(--police); font-weight: 700; font-size: 11px; text-anchor: middle; dominant-baseline: central; fill: var(--marine); }
+.cone .pastille-eq.eq-0 + text, .cone .pastille-eq.eq-6 + text { fill: var(--blanc); }
+/* Routes proposées à un embranchement */
+.case.route-visee .case-corps { animation: visee 1s ease-in-out infinite; }
+@keyframes visee { 50% { filter: drop-shadow(0 0 10px var(--cyan)) brightness(1.15); transform: scale(1.12); } }
+.plateau.scene-etroite .scene-titre { font-size: clamp(20px, 2.4vw, 36px); }
+.plateau.scene-etroite .scene-texte, .plateau.scene-etroite .scene-joueurs { font-size: clamp(12px, 1vw, 16px); }
+.plateau.scene-etroite .de { width: 64px; height: 64px; padding: 7px; }
+.plateau.scene-etroite .de i { width: 11px; height: 11px; }
 .case rect { stroke: var(--marine); stroke-width: 2; }
 /* Projecteur : la case d'arrivée grossit et brille, le reste du plateau s'assombrit */
 .case-corps { transform-box: fill-box; transform-origin: center; transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), filter .5s; }
@@ -481,6 +499,55 @@ body.noel .bonus-carte.cache h3 { background: var(--blanc); padding: 4px 14px; }
 body.noel .info { background: var(--noel-or-pale); border-left-color: var(--noel-or); }
 body.noel .dialogue { border-top-color: var(--noel-rouge); }
 
+/* ------------------------------------------------------------------ options de partie : carte, tours, objets */
+.choix-cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.carte-choix {
+  font: inherit; color: var(--marine); background: var(--blanc); border: 2px solid var(--bordure); padding: 14px; text-align: left;
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer;
+}
+.carte-choix:hover { background: var(--bleu-pale); }
+.carte-choix[aria-checked="true"] { border: 4px solid var(--marine); padding: 12px; background: var(--bleu-pale); }
+.carte-choix strong { font-size: 17px; }
+.carte-choix small { font-size: 13px; }
+.apercu-carte { width: 100%; height: auto; display: block; background: var(--blanc); margin-bottom: 6px; }
+.apercu-carte .case rect { stroke-width: 3; }
+.apercu-carte .case.c-B rect { fill: var(--hachure); }
+.apercu-embranchement { fill: none; stroke: var(--cyan); stroke-width: 8; }
+.champ-tours { margin-bottom: 16px; max-width: 360px; }
+.champ-tours input { width: 100px; }
+.groupe-objets { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--gris); margin: 12px 0 6px; }
+.groupe-objets:first-child { margin-top: 0; }
+.objet-choix { padding: 6px 0; cursor: pointer; }
+.objet-choix input { width: 18px; height: 18px; accent-color: var(--marine); flex: none; }
+.objet-choix .objet-vignette { width: 46px; height: 46px; }
+.etiquette-usage { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 2px 8px; background: var(--bleu-pale); }
+.etiquette-usage.jeu { background: var(--vert); }
+
+/* ------------------------------------------------------------------ objets de jeu (panneau d'action) */
+.objets-jeu { display: flex; flex-direction: column; gap: 8px; }
+.objet-jeu { justify-content: flex-start; text-align: left; white-space: normal; gap: 10px; padding: 8px 10px; }
+.objet-jeu .objet-vignette { width: 40px; height: 40px; }
+.objet-jeu small { display: block; color: var(--gris); font-size: 12px; }
+
+/* ------------------------------------------------------------------ embranchement */
+.dialogue-route { width: min(760px, 96vw); margin: auto auto 3vh; }
+.dialogue-route::backdrop { background: rgba(21, 31, 109, .12); }
+.route-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.route-option {
+  font: inherit; color: var(--marine); background: var(--blanc); border: 2px solid var(--marine); padding: 14px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px; text-align: left;
+}
+.route-option:hover { background: var(--bleu-pale); }
+.route-sens { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.route-option strong { font-size: 17px; }
+.route-option small { color: var(--gris); font-size: 12.5px; }
+.route-apercu { display: flex; gap: 4px; }
+.mini-case { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; border: 2px solid var(--marine); }
+.mini-case.c-T, .mini-case.c-I { background: var(--marine); color: var(--blanc); }
+.mini-case.c-R { background: var(--vert); } .mini-case.c-E { background: var(--cyan); }
+.mini-case.c-B { background: repeating-linear-gradient(45deg, var(--gris-pale) 0 4px, var(--hachure) 4px 6px); }
+.mini-case.c-F { background: var(--marine-doux); } .mini-case.c-D { background: var(--bleu-pale); } .mini-case.c-M { background: var(--blanc); }
+
 /* ------------------------------------------------------------------ équipes au hasard */
 .hasard { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 20px; align-items: start; }
 .hasard-actions { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
@@ -699,5 +766,6 @@ body.mouvement-reduit .pions-svg > g, body.mouvement-reduit .case-corps, body.mo
 body.mouvement-reduit .ecran-geant.entree::before, body.mouvement-reduit .ecran-geant.entree::after, body.mouvement-reduit .ecran-geant.entree .geant-illustration, body.mouvement-reduit .ecran-geant.entree .geant-texte > *, body.mouvement-reduit .case.illuminee .halo-case, body.mouvement-reduit .case.passage .case-corps, body.mouvement-reduit .pions-svg .saut.bondit {animation: none; }
 body.mouvement-reduit .guirlande {animation: none; }
 body.mouvement-reduit .neige {display: none !important; }
+body.mouvement-reduit .case.route-visee .case-corps {animation: none; filter: drop-shadow(0 0 10px var(--cyan)); }
 body.mouvement-reduit .podium li.suspense, body.mouvement-reduit .podium li.revelee, body.mouvement-reduit .roulette-case.gagnante, body.mouvement-reduit .finaliste.vainqueur, body.mouvement-reduit .pulse-chiffre, body.mouvement-reduit .billet-gagne {animation: none; }
 @media print { .guirlande, .neige { display: none !important; } }

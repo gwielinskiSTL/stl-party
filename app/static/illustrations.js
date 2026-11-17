@@ -192,6 +192,22 @@ const ILLUSTRATIONS = (() => {
   CASES.billet_trop_cher = CASES.billet;
   CASES.billet_achete = CASES.billet;
   CASES.depanneur_passe = () => depanneur();
+  CASES.piege = () => svg(`${fond("gris-pale")}${cone(100, 100, 1.4)}
+      <path d="M40 160 q60 -26 120 0" ${trait("marine", 4, "stroke-dasharray:8 8")}></path>
+      <circle cx="152" cy="54" r="20" ${plein("marine")}></circle><path d="M152 44v12M152 64v1" ${trait("blanc", 5)}></path>`, "Chantier sur la route");
+
+  const de = (x, y, t, valeur, angle = 0, c = "blanc") => {
+    const P = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+      5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[valeur];
+    return `<g transform="translate(${x} ${y}) rotate(${angle})"><rect x="${-t / 2}" y="${-t / 2}" width="${t}" height="${t}" rx="${t * 0.16}"
+      style="fill:var(--${c});stroke:var(--marine);stroke-width:4"></rect>
+      ${P.map(([i, j]) => `<circle cx="${i * t * 0.26}" cy="${j * t * 0.26}" r="${t * 0.08}" ${plein("marine")}></circle>`).join("")}</g>`;
+  };
+
+  const cone = (x, y, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})">
+      <path d="M-26 34 L-8 -40 H8 L26 34 Z" style="fill:var(--marine);stroke:var(--marine);stroke-width:3;stroke-linejoin:round"></path>
+      <path d="M-15 -4 H15 L19 12 H-19 Z" ${plein("blanc")}></path><path d="M-11 -22 H11 L13 -14 H-13 Z" ${plein("blanc")}></path>
+      <rect x="-34" y="32" width="68" height="10" rx="2" ${plein("marine")}></rect></g>`;
 
   // ------------------------------------------------------------------ objets du dépanneur
   const OBJETS = {
@@ -216,6 +232,25 @@ const ILLUSTRATIONS = (() => {
       <path d="M150 100h34M172 86l14 14-14 14" ${trait("vert", 7)}></path>
       <path d="M156 64v-30h22l-6 8 6 8h-22" style="fill:var(--vert);stroke:var(--marine);stroke-width:3;stroke-linejoin:round"></path>`,
       "Horloge et flèche vers la fin de la file"),
+
+    de_supplementaire: () => svg(`${fond("bleu-pale")}
+      ${de(78, 112, 70, 5, -10)}${de(128, 92, 58, 3, 12, "cyan")}
+      <circle cx="156" cy="152" r="24" style="fill:var(--vert);stroke:var(--marine);stroke-width:4"></circle>
+      <path d="M156 140v24M144 152h24" ${trait("marine", 6)}></path>
+      ${etincelles([[40, 56, 8], [170, 44, 7]], "marine")}`, "Deux dés et un plus"),
+
+    chantier: () => svg(`${fond("bleu-pale")}${cone(100, 112, 1.6)}
+      <rect x="30" y="168" width="140" height="10" ${plein("marine")}></rect>
+      ${etincelles([[44, 70, 7], [160, 62, 8]], "marine")}`, "Cône de chantier"),
+
+    feu_rouge: () => svg(`${fond("bleu-pale")}
+      <rect x="74" y="28" width="52" height="128" rx="12" ${plein("marine")}></rect>
+      <circle cx="100" cy="54" r="15" style="fill:var(--rouge);stroke:var(--blanc);stroke-width:3"></circle>
+      <circle cx="100" cy="92" r="15" style="fill:var(--marine-doux)"></circle>
+      <circle cx="100" cy="130" r="15" style="fill:var(--marine-doux)"></circle>
+      <rect x="94" y="156" width="12" height="26" ${plein("marine")}></rect>
+      <path d="M58 46 l-14 -8 M58 62 l-16 2 M142 46 l14 -8 M142 62 l16 2" ${trait("marine", 4)}></path>
+      <rect x="66" y="178" width="68" height="8" ${plein("marine")}></rect>`, "Feu rouge"),
 
     gel: () => svg(`${fond("bleu-pale")}
       <rect x="40" y="46" width="120" height="120" rx="18" style="fill:var(--blanc);stroke:var(--cyan);stroke-width:6"></rect>

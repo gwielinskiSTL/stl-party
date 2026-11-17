@@ -11,7 +11,8 @@ mode_noel = false       # true : le jeu s'ouvre en mode Noël (le bouton de l'en
 animations = "toujours" # "systeme" : réduire les animations si le poste le demande (réglage d'accessibilité de Windows)
 
 [partie]
-nb_tours = 6                       # un mini-jeu par tour
+nb_tours = 6                       # un mini-jeu par tour (modifiable à l'écran de départ)
+carte = "classique"                # carte par défaut : "classique", "express" ou "grand_reseau" (choix à l'écran de départ)
 kwh_depart = 10
 prix_billet = 20                   # prix d'un Billet d'or quand on passe dessus
 prix_vol_billet = 30               # prix pour faire voler un Billet d'or par le fantôme
@@ -37,6 +38,7 @@ bouchon = 3       # case Bouchon : − kWh
 terminus = 5      # passage au Terminus : + kWh
 
 [plateau]
+# Cases de la carte « La boucle » (classique). Les cartes à embranchements sont décrites dans app/cartes.py.
 # T Terminus · R Recharge · B Bouchon · E Événement · I Inspecteur · F Fantôme du garage
 # D Détour · M Dépanneur (boutique). Le plateau est une boucle ; la première case doit être T.
 cases = "T R R E R M B R F R E R I R D B R E R R M R B F R E R I R D R B"
@@ -72,7 +74,12 @@ nom = "Finale : la tour de gobelets"
 description = "Toute l'équipe construit la plus haute tour de gobelets en 60 secondes, une seule main par personne."
 toute_equipe = true
 
-# ------------------------------------------------------------------ objets (utilisables pendant l'échange)
+# ------------------------------------------------------------------ objets du dépanneur
+# usage = "echange" (défaut) : sert pendant l'échange de cadeaux ; distribué à un membre de l'équipe à la pige.
+# usage = "jeu" : s'utilise sur le plateau, avant de lancer les dés ; effet = "de_plus" (dés en plus pour soi),
+#   "piege" (cône de chantier sur sa case : la prochaine équipe adverse qui s'y arrête donne « valeur » kWh) ou
+#   "de_moins" (une autre équipe lance « valeur » dé de moins à son prochain lancer).
+# On choisit à l'écran de départ quels objets sont offerts dans la partie.
 # description : la règle en une phrase · explication : un exemple concret, affiché au dépanneur
 # image (facultatif) : fichier dans app/static/images/ pour remplacer l'illustration dessinée
 [[objets]]
@@ -109,3 +116,34 @@ nom = "Gel"
 prix = 8
 description = "Un joueur de votre choix ne peut pas voler à son prochain tour."
 explication = "Exemple : un collègue lorgne votre cadeau ? Gelez-le : à son prochain tour, il devra ouvrir un nouveau cadeau au lieu de voler."
+
+# ---- objets de jeu (sur le plateau)
+[[objets]]
+id = "de_supplementaire"
+nom = "Dé supplémentaire"
+prix = 10
+usage = "jeu"
+effet = "de_plus"
+valeur = 1
+description = "Avant de lancer : un dé de plus pour ce tour."
+explication = "Exemple : vous avez fini 4e au mini-jeu et ne lancez que 2 dés ? Utilisez-le et lancez-en 3."
+
+[[objets]]
+id = "chantier"
+nom = "Cône de chantier"
+prix = 8
+usage = "jeu"
+effet = "piege"
+valeur = 10
+description = "Posez un chantier sur votre case : la prochaine équipe adverse qui s'y arrête vous donne 10 kWh."
+explication = "Exemple : vous êtes juste avant le dépanneur, où tout le monde veut passer ? Laissez-y un cône avant de repartir."
+
+[[objets]]
+id = "feu_rouge"
+nom = "Feu rouge"
+prix = 10
+usage = "jeu"
+effet = "de_moins"
+valeur = 1
+description = "Avant de lancer : l'équipe de votre choix lancera un dé de moins à son prochain lancer."
+explication = "Exemple : l'équipe en tête s'approche du Billet d'or ? Un feu rouge, et elle n'aura peut-être pas assez de pas."

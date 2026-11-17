@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import copy
 import random
+
+from . import cartes
 from datetime import datetime
 
 hasard = random.Random()
@@ -51,8 +53,10 @@ class ErreurJeu(Exception):
 
 
 # ===================================================================================== création
-def nouvelle_partie(cfg: dict, equipes: list[dict]) -> dict:
-    """equipes : [{"nom": str, "joueurs": [str, ...]}, ...]"""
+def nouvelle_partie(cfg: dict, equipes: list[dict], options: dict | None = None) -> dict:
+    """equipes : [{"nom": str, "joueurs": [str, ...]}, ...]
+    options (facultatif, choisi à l'écran de départ) : {"nb_tours": int, "carte": id, "objets": [id, ...]}"""
+    options = options or {}
     if not 2 <= len(equipes) <= 8:
         raise ErreurJeu("Il faut entre 2 et 8 équipes.")
     noms = [str(e.get("nom") or "").strip() for e in equipes]
@@ -71,27 +75,48 @@ def nouvelle_partie(cfg: dict, equipes: list[dict]) -> dict:
             "kwh": int(p["kwh_depart"]), "billets": 0, "objets": [],
             "stats": {"cases": 0, "kwh_gagnes": 0, "malchances": 0, "rangs": []},
         })
-    cases = cfg["plateau"]["liste"]
+    nb_tours = options.get("nb_tours", p["nb_tours"])
+    try:
+        nb_tours = int(nb_tours)
+    except (TypeError, ValueError):
+        raise ErreurJeu("Nombre de tours invalide.")
+    if not 1 <= nb_tours <= 20:
+        raise ErreurJeu("Le nombre de tours doit être entre 1 et 20.")
+    ident_carte = options.get("carte") or p.get("carte", "classique")
+    try:
+        carte = cartes.par_id(ident_carte, cfg["plateau"]["liste"])
+    except KeyError:
+        raise ErreurJeu(f"Carte inconnue : {ident_carte}")
+    objets = copy.deepcopy(cfg["objets"])
+    if options.get("objets") is not None:
+        voulus = set(options["objets"])
+        inconnus = voulus - {o["id"] for o in objets}
+        if inconnus:
+            raise ErreurJeu(f"Objet inconnu : {', '.join(sorted(inconnus))}")
+        objets = [o for o in objets if o["id"] in voulus]
     etat = {
         "version": 1,
         "cree_le": datetime.now().isoformat(timespec="seconds"),
         "reglages": {
             "partie": copy.deepcopy(p), "cases": copy.deepcopy(cfg["cases"]),
-            "mini_jeux": copy.deepcopy(cfg["mini_jeux"]), "objets": copy.deepcopy(cfg["objets"]),
+            "mini_jeux": copy.deepcopy(cfg["mini_jeux"]), "objets": objets,
             "pige": copy.deepcopy(cfg.get("pige") or {}),
         },
-        "plateau": cases,
-        "nb_tours": int(p["nb_tours"]),
+        "carte": carte,
+        "plateau": [n["type"] for n in carte["noeuds"]],   # type de chaque case (source de vérité des effets)
+        "nb_tours": nb_tours,
         "tour": 1,
         "phase": "mini_jeu",
         "equipes": liste,
         "position_billet": None,
         "file": [], "des": {}, "courant": None, "attente": None,
         "bonus": [], "pige": None,
+        "pieges": [],          # cônes de chantier posés : {"case", "equipe", "valeur"}
+        "modif_des": {},       # dés en plus (+) ou en moins (−) au prochain lancer de chaque équipe
         "journal": [],
     }
     _placer_billet(etat)
-    _noter(etat, "La partie commence ! Tout le monde part du Terminus.")
+    _noter(etat, f"La partie commence sur la carte « {carte['nom']} » ({nb_tours} tours) ! Tout le monde part du Terminus.")
     return etat
 
 
@@ -126,6 +151,30 @@ def _placer_billet(etat: dict):
     choix = [i for i in recharges if i != ancien and i not in occupees] or [i for i in recharges if i != ancien] \
         or recharges
     etat["position_billet"] = hasard.choice(choix)
+
+
+def suivants(etat: dict, i: int) -> list[int]:
+    carte = etat.get("carte")
+    if carte:
+        return carte["noeuds"][i]["suivants"]
+    return [(i + 1) % len(etat["plateau"])]         # parties enregistrées avant les cartes
+
+
+def _aller(etat: dict, eq: dict, vers: int):
+    eq["position"] = vers
+    trace = eq.setdefault("trace", [0])
+    trace.append(vers)
+    del trace[:-16]
+
+
+def nb_des(etat: dict, ident) -> int:
+    """Dés de ce tour : selon le mini-jeu, plus les dés gagnés ou perdus par objet (au moins 1)."""
+    base = int(etat["des"].get(str(ident), 1))
+    return max(1, base + int(etat.get("modif_des", {}).get(str(ident), 0)))
+
+
+def usage(o: dict) -> str:
+    return o.get("usage", "echange")
 
 
 def _objet(etat: dict, ident: str) -> dict:
@@ -196,21 +245,34 @@ def lancer(etat: dict) -> dict:
     if etat["attente"]:
         raise ErreurJeu("Une décision est attendue avant de lancer les dés.", 409)
     eq = _eq(etat, etat["courant"])
-    nb = int(etat["des"].get(str(eq["id"]), 1))
+    nb = nb_des(etat, eq["id"])
+    modif = int(etat.setdefault("modif_des", {}).pop(str(eq["id"]), 0))
     des = [hasard.randint(1, 6) for _ in range(nb)]
     total = sum(des)
-    _noter(etat, f"{eq['nom']} lance {nb} dé{'s' if nb > 1 else ''} : {' + '.join(map(str, des))} = {total}.")
+    precision = f" ({modif:+d} dé par objet)" if modif else ""
+    _noter(etat, f"{eq['nom']} lance {nb} dé{'s' if nb > 1 else ''}{precision} : {' + '.join(map(str, des))} = {total}.")
     anim = _animation_deplacement(eq, des)
     _avancer(etat, eq, total, anim)
     return anim
 
 
 def _avancer(etat: dict, eq: dict, pas: int, anim: dict):
-    """Avance pas à pas. S'arrête en route si une décision est nécessaire (Billet d'or, Dépanneur)."""
-    n = len(etat["plateau"])
+    """Avance pas à pas. S'arrête en route si une décision est nécessaire (embranchement, Billet d'or, Dépanneur)."""
     reglages = etat["reglages"]
     while pas > 0:
-        eq["position"] = (eq["position"] + 1) % n
+        routes = suivants(etat, eq["position"])
+        if len(routes) > 1:
+            choix = eq.pop("choix", None)
+            if choix not in routes:
+                noeud = etat["carte"]["noeuds"][eq["position"]]
+                etat["attente"] = {"type": "embranchement", "equipe": eq["id"], "reste": pas,
+                                   "case": eq["position"], "options": noeud.get("options") or
+                                   [{"vers": r, "sens": "", "nom": "", "apercu": []} for r in routes]}
+                return
+            vers = choix
+        else:
+            vers = routes[0]
+        _aller(etat, eq, vers)
         pas -= 1
         eq["stats"]["cases"] += 1
         anim["chemin"].append(eq["position"])
@@ -243,6 +305,19 @@ def _atterrir(etat: dict, eq: dict, anim: dict):
     r = etat["reglages"]["cases"]
     ev = anim["evenements"]
     nom = eq["nom"]
+
+    piege = next((p for p in etat.get("pieges", []) if p["case"] == eq["position"] and p["equipe"] != eq["id"]), None)
+    if piege:
+        poseur = _eq(etat, piege["equipe"])
+        montant = min(eq["kwh"], int(piege["valeur"]))
+        _gagner(etat, eq, -montant)
+        _gagner(etat, poseur, montant)
+        eq["stats"]["malchances"] += 1
+        etat["pieges"].remove(piege)
+        texte = f"{nom} tombe sur le cône de chantier de {poseur['nom']} : −{montant} kWh, qui vont à {poseur['nom']}."
+        ev.append({"code": "piege", "equipe": eq["id"], "equipes": [eq["id"], poseur["id"]],
+                   "titre": "Chantier !", "texte": texte, "ton": "mauvais"})
+        _noter(etat, texte)
 
     if case == "R":
         gain = _gagner(etat, eq, r["recharge"])
@@ -278,7 +353,6 @@ def _atterrir(etat: dict, eq: dict, anim: dict):
 
 def _evenement(etat: dict, eq: dict) -> dict:
     nom = eq["nom"]
-    n = len(etat["plateau"])
     tirage = hasard.randrange(8)
     if tirage == 0:
         g = _gagner(etat, eq, 5)
@@ -292,15 +366,19 @@ def _evenement(etat: dict, eq: dict) -> dict:
         eq["stats"]["malchances"] += 1
         return {"code": "borne_panne", "titre": "Borne en panne", "texte": f"La borne refuse de charger : {nom} perd {p} kWh.", "ton": "mauvais"}
     if tirage == 3:
-        eq["position"] = (eq["position"] - 3) % n
+        trace = eq.get("trace") or [eq["position"]]
+        recul = trace[-4] if len(trace) >= 4 else trace[0]
+        eq["trace"] = trace[:-3] or [recul]
+        eq["position"] = recul
         eq["stats"]["malchances"] += 1
         return {"code": "correspondance_ratee", "titre": "Correspondance ratée", "texte": f"{nom} recule de 3 arrêts.", "ton": "mauvais", "saut": eq["position"]}
     if tirage == 4:
-        eq["position"] = (eq["position"] + 3) % n
+        for _ in range(3):
+            _aller(etat, eq, suivants(etat, eq["position"])[0])
         eq["stats"]["cases"] += 3
         return {"code": "express", "titre": "Service express", "texte": f"{nom} saute 3 arrêts.", "ton": "bon", "saut": eq["position"]}
     if tirage == 5:
-        if len(eq["objets"]) < int(etat["reglages"]["partie"]["max_objets"]):
+        if etat["reglages"]["objets"] and len(eq["objets"]) < int(etat["reglages"]["partie"]["max_objets"]):
             o = hasard.choice(etat["reglages"]["objets"])
             eq["objets"].append({"id": o["id"], "utilise": False})
             return {"code": "prime", "titre": "Prime de ponctualité", "texte": f"{nom} reçoit un objet gratuit : {o['nom']} !", "ton": "bon",
@@ -341,7 +419,21 @@ def decider(etat: dict, decision: dict) -> dict:
     eq = _eq(etat, att["equipe"])
     anim = _animation_deplacement(eq, [])
 
-    if att["type"] == "billet":
+    if att["type"] == "embranchement":
+        vers = decision.get("vers")
+        try:
+            vers = int(vers)
+        except (TypeError, ValueError):
+            raise ErreurJeu("Route invalide.")
+        if vers not in suivants(etat, att["case"]):
+            raise ErreurJeu("Cette route ne part pas de cette case.")
+        option = next((o for o in att["options"] if o["vers"] == vers), {})
+        eq["choix"] = vers
+        etat["attente"] = None
+        _noter(etat, f"{eq['nom']} prend la route {option.get('sens') or ''} {('(' + option['nom'] + ')') if option.get('nom') else ''}".strip() + ".")
+        _continuer(etat, eq, att["reste"], anim)
+
+    elif att["type"] == "billet":
         if decision.get("acheter"):
             _gagner(etat, eq, -att["prix"])
             eq["billets"] += 1
@@ -364,7 +456,7 @@ def decider(etat: dict, decision: dict) -> dict:
                 raise ErreurJeu(f"Pas assez de kWh pour {o['nom']} ({o['prix']} kWh).")
             _gagner(etat, eq, -int(o["prix"]))
             eq["objets"].append({"id": o["id"], "utilise": False})
-            anim["evenements"].append({"code": "achat", "equipe": eq["id"], "objet": o["id"], "titre": "Dépanneur", "texte": f"{eq['nom']} achète : {o['nom']}.", "ton": "bon"})
+            # pas de page de garde : l'achat vient d'être confirmé à l'écran, le journal suffit
             _noter(etat, f"{eq['nom']} achète {o['nom']} au dépanneur.")
         etat["attente"] = None
         _continuer(etat, eq, att["reste"], anim)
@@ -395,6 +487,50 @@ def decider(etat: dict, decision: dict) -> dict:
         etat["attente"] = None
         _equipe_suivante(etat)
     return anim
+
+
+# ===================================================================================== objets de jeu
+EFFETS_JEU = {"de_plus", "piege", "de_moins"}
+
+
+def utiliser_objet(etat: dict, indice, cible=None) -> dict:
+    """L'équipe dont c'est le tour utilise un objet de jeu avant de lancer ses dés."""
+    _verifier_phase(etat, "deplacement")
+    if etat["attente"]:
+        raise ErreurJeu("Une décision est attendue.", 409)
+    eq = _eq(etat, etat["courant"])
+    try:
+        objet = eq["objets"][int(indice)]
+    except (TypeError, ValueError, IndexError):
+        raise ErreurJeu("Objet introuvable.")
+    o = _objet(etat, objet["id"])
+    if usage(o) != "jeu":
+        raise ErreurJeu(f"{o['nom']} s'utilise pendant l'échange de cadeaux, pas sur le plateau.")
+    effet, valeur = o.get("effet"), int(o.get("valeur", 1))
+    modif = etat.setdefault("modif_des", {})
+    if effet == "de_plus":
+        modif[str(eq["id"])] = modif.get(str(eq["id"]), 0) + valeur
+        ev = {"code": "objet_de", "titre": o["nom"], "texte": f"{eq['nom']} lancera {valeur} dé de plus ce tour-ci !", "ton": "bon"}
+    elif effet == "piege":
+        if etat["plateau"][eq["position"]] == "T":
+            raise ErreurJeu("Pas de chantier au Terminus.")
+        if any(p["case"] == eq["position"] for p in etat.setdefault("pieges", [])):
+            raise ErreurJeu("Il y a déjà un cône de chantier sur cette case.")
+        etat["pieges"].append({"case": eq["position"], "equipe": eq["id"], "valeur": valeur})
+        ev = {"code": "objet_piege", "titre": o["nom"],
+              "texte": f"{eq['nom']} installe un chantier ici : la prochaine équipe qui s'y arrête lui donnera {valeur} kWh.", "ton": "neutre"}
+    elif effet == "de_moins":
+        victime = _eq(etat, cible)
+        if victime["id"] == eq["id"]:
+            raise ErreurJeu("Choisissez une autre équipe.")
+        modif[str(victime["id"])] = modif.get(str(victime["id"]), 0) - valeur
+        ev = {"code": "objet_feu", "titre": o["nom"], "equipes": [eq["id"], victime["id"]],
+              "texte": f"{eq['nom']} met un feu rouge devant {victime['nom']} : {valeur} dé de moins à son prochain lancer.", "ton": "mauvais"}
+    else:
+        raise ErreurJeu(f"Effet inconnu pour {o['nom']}.")
+    eq["objets"].pop(int(indice))           # un objet de jeu disparaît une fois utilisé
+    _noter(etat, ev["texte"])
+    return {"type": "objet", "equipe": eq["id"], "chemin": [], "evenements": [{**ev, "equipe": eq["id"], "objet": o["id"]}]}
 
 
 def _continuer(etat: dict, eq: dict, reste: int, anim: dict):
@@ -555,7 +691,7 @@ def tirer_pige(etat: dict) -> dict:
     for e in etat["equipes"]:
         membres = list(e["joueurs"])
         hasard.shuffle(membres)
-        indices = list(range(len(e["objets"])))
+        indices = [k for k, o in enumerate(e["objets"]) if usage(_objet(etat, o["id"])) != "jeu"]
         hasard.shuffle(indices)
         for k, indice in enumerate(indices):
             objets.append({"equipe": e["id"], "indice": indice, "joueur": membres[k % len(membres)]})
@@ -603,6 +739,7 @@ def vue_suivi(affiche: dict | None, actuel: dict | None) -> dict:
             "kwh": None if cache else e["kwh"], "billets": None if cache else e["billets"],
             "arret": e["position"] + 1, "des": affiche["des"].get(str(e["id"])),
             "objets": [{"id": o["id"], "nom": noms_objets.get(o["id"], {}).get("nom", o["id"]),
+                        "usage": usage(noms_objets.get(o["id"], {})),
                         "description": noms_objets.get(o["id"], {}).get("description", ""), "utilise": o["utilise"]}
                        for o in e["objets"]],
         })

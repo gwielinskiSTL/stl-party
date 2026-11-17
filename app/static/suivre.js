@@ -66,13 +66,15 @@ function rendre(v) {
       <ul class="suivi-journal">${v.journal.map((t) => `<li>${echapper(t)}</li>`).join("")}</ul>` : ""}`;
 
   // inventaire
-  $("#panneau-inventaire").innerHTML = `<p class="note suivi-intro">Objets achetés au dépanneur ; ils serviront pendant l'échange de cadeaux.
+  $("#panneau-inventaire").innerHTML = `<p class="note suivi-intro">Objets achetés au dépanneur : ceux « sur le plateau » servent pendant la partie, les autres pendant l'échange de cadeaux.
       ${v.pige.faite ? "Ils ont été remis en secret à des membres de chaque équipe." : ""}</p>
     ${v.equipes.map((e) => `<div class="suivi-inventaire">
       <h2>${pion(e.id)} ${echapper(e.nom)}</h2>
       ${e.objets.length ? e.objets.map((o) => `<div class="objet-ligne${o.utilise ? " utilise" : ""}">
           <span class="objet-vignette">${ILLUSTRATIONS.objet(o.id)}</span>
-          <span><strong>${echapper(o.nom)}</strong>${o.utilise ? " · utilisé" : ""}<small>${echapper(o.description)}</small></span></div>`).join("")
+          <span><strong>${echapper(o.nom)}</strong>${o.utilise ? " · utilisé" : ""}
+            <span class="etiquette-usage ${o.usage === "jeu" ? "jeu" : ""}">${o.usage === "jeu" ? "Sur le plateau" : "Pendant l'échange"}</span>
+            <small>${echapper(o.description)}</small></span></div>`).join("")
         : `<p class="note">Aucun objet pour l'instant.</p>`}</div>`).join("")}`;
 
   // pige

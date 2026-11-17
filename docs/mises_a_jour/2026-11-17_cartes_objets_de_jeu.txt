@@ -1,0 +1,13 @@
+2026-11-17 — Cartes à embranchements, objets de jeu, réglages de partie
+
+- Trois cartes (app/cartes.py) : « La boucle » (cases de [plateau]), « Express ou local » (un embranchement) et
+  « Le grand réseau » (deux embranchements, dont une boucle). Le plateau est un graphe : à un embranchement, l'équipe
+  choisit sa route (tout droit, à gauche, à droite, calculé selon le tracé), avec l'aperçu des 5 prochains arrêts ;
+  les cases de chaque route clignotent sur le plateau. Arrêt pile sur un embranchement : choix au lancer suivant.
+  « Correspondance ratée » recule par le chemin réellement parcouru ; « Service express » suit la route principale.
+- Objets « sur le plateau » (usage = "jeu" dans STL_PARTY.toml), utilisables avant de lancer, avec page de garde :
+  Dé supplémentaire (+1 dé), Cône de chantier (piège sur sa case : la prochaine équipe adverse qui s'y arrête donne
+  10 kWh au poseur), Feu rouge (une autre équipe lance un dé de moins à son prochain lancer ; jamais moins d'un dé).
+  Ils disparaissent une fois utilisés et ne sont pas distribués à la pige.
+- Plus de page de garde après un achat au dépanneur (le journal le note).
+- Écran de départ : nombre de tours (1 à 20), choix de la carte (aperçus) et des objets offerts (Tous / Aucun).

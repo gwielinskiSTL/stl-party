@@ -57,6 +57,13 @@ def lire() -> dict:
         raise ErreurConfig("Le plateau doit avoir au moins une case Recharge (R) pour le Billet d'or")
     cfg["plateau"]["liste"] = cases
 
+    for o in cfg["objets"]:
+        u = o.setdefault("usage", "echange")
+        if u not in ("echange", "jeu"):
+            raise ErreurConfig(f"Objet « {o.get('id')} » : usage doit valoir « echange » ou « jeu »")
+        if u == "jeu" and o.get("effet") not in ("de_plus", "piege", "de_moins"):
+            raise ErreurConfig(f"Objet de jeu « {o.get('id')} » : effet doit valoir « de_plus », « piege » ou « de_moins »")
+
     pige = cfg.setdefault("pige", {})
     poids = pige.get("poids_par_rang", [5, 4, 3, 2, 1])
     if not poids or any(float(x) <= 0 for x in poids):

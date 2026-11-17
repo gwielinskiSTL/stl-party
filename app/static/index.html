@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STL Party</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%23151f6d%27/%3E%3Ccircle cx=%278%27 cy=%278%27 r=%273.5%27 fill=%27%2300a9e0%27/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/style.css?v=2026-11-17b">
+  <link rel="stylesheet" href="/static/style.css?v=2026-11-17c">
 </head>
 <body>
   <header class="entete-stl">
@@ -96,14 +96,23 @@
           équipe joue : avec 5 joueurs et 5 mini-jeux, tout le monde joue une fois.</p>
         <div class="grille-equipes" id="config-equipes"></div>
       </div>
+      <div class="bloc">
+        <div class="bloc-tete"><h2>Carte</h2><span class="note">Les cercles marquent les embranchements</span></div>
+        <div class="choix-cartes" id="config-cartes" role="radiogroup" aria-label="Carte"></div>
+      </div>
       <div class="deux-colonnes">
         <div class="bloc">
-          <div class="bloc-tete"><h2>Mini-jeux, dans l'ordre</h2><span class="note">Modifiables dans STL_PARTY.toml</span></div>
+          <div class="bloc-tete"><h2>Mini-jeux et tours</h2><span class="note">Mini-jeux modifiables dans STL_PARTY.toml</span></div>
+          <label class="champ champ-tours"><span>Nombre de tours</span>
+            <input type="number" id="config-tours" min="1" max="20">
+            <small>Un mini-jeu par tour ; s'il y a plus de tours que de mini-jeux, la liste recommence.</small>
+          </label>
           <ol class="liste-simple" id="config-mini-jeux"></ol>
         </div>
         <div class="bloc">
-          <div class="bloc-tete"><h2>Objets du dépanneur</h2><span class="note">Utilisables pendant l'échange</span></div>
-          <ul class="liste-simple" id="config-objets"></ul>
+          <div class="bloc-tete"><h2>Objets du dépanneur</h2>
+            <span class="actions"><button class="btn btn-lien btn-petit" id="objets-tous">Tous</button><button class="btn btn-lien btn-petit" id="objets-aucun">Aucun</button></span></div>
+          <div id="config-objets"></div>
         </div>
       </div>
       <div class="bloc">
@@ -159,13 +168,31 @@
           <div><dt>Objets</dt><dd id="boutique-nb"></dd></div>
         </dl>
       </div>
-      <p class="boutique-intro">Les objets ne servent pas sur le plateau : ils s'utilisent <strong>pendant l'échange de cadeaux</strong>.
-        Choisissez-en un, puis confirmez.</p>
+      <p class="boutique-intro">Les objets <strong>« sur le plateau »</strong> s'utilisent avant un lancer de dés ; les objets
+        <strong>« pendant l'échange »</strong> servent à l'échange de cadeaux. Choisissez-en un, puis confirmez.</p>
       <div class="boutique-grille" id="boutique-objets" role="radiogroup" aria-label="Objets à acheter"></div>
       <div class="boutique-pied">
         <button class="btn btn-secondaire btn-geant" value="rien">Ne rien acheter</button>
         <button class="btn btn-principal btn-geant" value="acheter" id="boutique-acheter" disabled>Choisissez un objet</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue dialogue-route" id="dlg-route">
+    <form method="dialog">
+      <h2 id="route-titre">Embranchement</h2>
+      <p class="note" id="route-texte"></p>
+      <div class="route-options" id="route-options"></div>
+      <p class="note">Les cases qui clignotent sur le plateau sont les prochains arrêts de chaque route.</p>
+    </form>
+  </dialog>
+
+  <dialog class="dialogue" id="dlg-cible">
+    <form method="dialog">
+      <h2 id="cible-titre"></h2>
+      <p class="note" id="cible-texte"></p>
+      <div class="choix-equipes" id="cible-equipes"></div>
+      <div class="actions"><button class="btn btn-secondaire" value="annuler">Annuler</button></div>
     </form>
   </dialog>
 
@@ -248,8 +275,8 @@
   <div class="revelation" id="revelation" role="dialog" aria-modal="true" aria-live="polite" hidden></div>
   <div class="confettis" id="confettis" aria-hidden="true"></div>
 
-  <script src="/static/sons.js?v=2026-11-17b"></script>
-  <script src="/static/illustrations.js?v=2026-11-17b"></script>
-  <script src="/static/app.js?v=2026-11-17b"></script>
+  <script src="/static/sons.js?v=2026-11-17c"></script>
+  <script src="/static/illustrations.js?v=2026-11-17c"></script>
+  <script src="/static/app.js?v=2026-11-17c"></script>
 </body>
 </html>
